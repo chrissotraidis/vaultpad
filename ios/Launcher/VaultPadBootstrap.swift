@@ -166,6 +166,9 @@ private enum VaultDataImporter {
         touch_mode=hybrid
         touch_sensitivity=1.0
 
+        [ui]
+        auto_quick_save=3
+
         """
         try config.write(to: destination, atomically: true, encoding: .utf8)
     }
