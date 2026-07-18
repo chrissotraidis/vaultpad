@@ -34,7 +34,5 @@
 
 ## Remaining acceptance work
 
-- Finish the Temple and reach a dialogue/barter-capable save.
-- Verify on-screen numeric entry in a real quantity selector.
-- Exercise dialogue choices, barter, world map, and Klamath touch play.
+- Exercise world-map and Klamath area-transition touch play; dialogue, barter, and numeric entry are covered in [the Klamath checkpoint](2026-07-18-klamath-barter.md).
 - Run the release/device build, legal asset scan, and final clean-install matrix.
