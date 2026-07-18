@@ -1,6 +1,66 @@
+import AVFoundation
 import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
+
+@_silgen_name("falloutPauseIOSAudio")
+private func falloutPauseIOSAudio()
+
+@_silgen_name("falloutResumeIOSAudio")
+private func falloutResumeIOSAudio()
+
+@MainActor
+private final class VaultPadAudioSession {
+    static let shared = VaultPadAudioSession()
+
+    private var observers: [NSObjectProtocol] = []
+
+    private init() {}
+
+    func configure() {
+        guard observers.isEmpty else { return }
+
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.playback, mode: .default)
+            try session.setActive(true)
+        } catch {
+            // SDL still has a usable default path if iOS declines activation.
+        }
+
+        observers.append(NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: session,
+            queue: .main
+        ) { notification in
+            guard let rawType = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  let type = AVAudioSession.InterruptionType(rawValue: rawType) else { return }
+
+            if type == .began {
+                falloutPauseIOSAudio()
+                return
+            }
+
+            let rawOptions = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            let options = AVAudioSession.InterruptionOptions(rawValue: rawOptions)
+            guard options.contains(.shouldResume) else { return }
+            try? session.setActive(true)
+            falloutResumeIOSAudio()
+        })
+
+        observers.append(NotificationCenter.default.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: session,
+            queue: .main
+        ) { notification in
+            guard let rawReason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+                  AVAudioSession.RouteChangeReason(rawValue: rawReason) == .oldDeviceUnavailable else { return }
+            falloutPauseIOSAudio()
+            try? session.setActive(true)
+            falloutResumeIOSAudio()
+        })
+    }
+}
 
 private enum ImportFailure: LocalizedError {
     case missing(String)
@@ -329,7 +389,10 @@ private enum BootstrapPresenter {
 }
 
 @_cdecl("falloutRunIOSProductBootstrap")
+@MainActor
 public func falloutRunIOSProductBootstrap() {
+    VaultPadAudioSession.shared.configure()
+
     let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     guard !VaultDataImporter.isReady(in: documents) else { return }
 
