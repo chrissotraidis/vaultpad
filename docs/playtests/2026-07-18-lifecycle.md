@@ -30,10 +30,19 @@ Scenario: fresh imported game, premade character at the Temple of Trials entranc
 6. Moved the character, backgrounded a second time, and verified a new complete `SLOT03/SAVE.DAT` with a later timestamp.
 7. Resumed, changed the character position, and pressed F7. The latest background save loaded successfully and restored the earlier character position; the engine displayed **Quick load game successfully loaded.**
 
-## Remaining lifecycle matrix
+## Stress matrix
 
-- Repeat 50 cycles across movies, fades, combat, dialogue, barter, inventory, and save/load screens.
-- Verify the save-safe skip path in every modal screen.
-- Test process suspension/termination timing, audio interruption/route changes, low-memory delivery, and force-kill restore on physical iPad hardware.
-- Confirm no Metal present/watchdog issue under physical-device background timing.
+- Completed **50 consecutive foreground/background cycles** from live Klamath gameplay by returning to the Simulator Home screen and reopening VaultPad each time.
+- The process remained alive with the same PID through all 50 cycles and resumed to the same playable map.
+- Rotating background saves remained loadable and the game continued reporting **Game Saved.** after resume.
+- Completed three additional cycles with the inventory open; the inventory remained open and interactive after every resume.
+- Completed three additional cycles during live Temple combat; turn state, AP, map, and HUD returned intact.
+- Completed three additional cycles with the load-game screen open; the modal and selected save state returned intact.
+- Earlier targeted runs also covered a movie/fade transition and Klamath dialogue/barter without a crash.
+- An intentional terminate/relaunch after the stress run loaded the latest save normally.
 
+No VaultPad error or crash appeared in the Simulator log. The only observed messages were known Simulator/framework startup noise (`libxpc`, `CFBundle`, `CoreFSCache`, and an audio-session property `-50`).
+
+## Physical-device boundary
+
+The Simulator matrix is complete. Process suspension timing, phone/Siri interruption, AirPods route changes, low-memory delivery, battery/thermal behavior, and Metal watchdog timing require physical iPad hardware and are not claimed by this result.
