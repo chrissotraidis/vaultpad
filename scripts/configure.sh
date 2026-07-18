@@ -41,6 +41,7 @@ cmake_args=(
     -DCMAKE_OSX_SYSROOT="$sdk"
     -DCMAKE_OSX_ARCHITECTURES=arm64
     -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0
+    -DFALLOUT_IOS_PRODUCT_SOURCES="$repo_root/ios/Launcher/VaultPadBootstrap.swift"
 )
 
 # Reuse an existing dependency checkout when available. Otherwise CMake fetches
