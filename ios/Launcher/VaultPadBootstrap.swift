@@ -228,9 +228,34 @@ private enum VaultDataImporter {
 
         [ui]
         auto_quick_save=3
+        quick_toolbar_visible=1
 
         """
         try config.write(to: destination, atomically: true, encoding: .utf8)
+    }
+
+    static func writeTouchMode(_ mode: String, to documents: URL) throws {
+        let destination = documents.appendingPathComponent("fallout2.cfg")
+        var lines = try String(contentsOf: destination, encoding: .utf8)
+            .components(separatedBy: .newlines)
+        var inInputSection = false
+        var replaced = false
+
+        for index in lines.indices {
+            let trimmed = lines[index].trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("[") && trimmed.hasSuffix("]") {
+                inInputSection = trimmed.caseInsensitiveCompare("[input]") == .orderedSame
+            } else if inInputSection && trimmed.lowercased().hasPrefix("touch_mode=") {
+                lines[index] = "touch_mode=\(mode)"
+                replaced = true
+                break
+            }
+        }
+
+        if !replaced {
+            lines.append(contentsOf: ["", "[input]", "touch_mode=\(mode)"])
+        }
+        try lines.joined(separator: "\n").write(to: destination, atomically: true, encoding: .utf8)
     }
 
     private static func locateDataRoot(from selected: URL) throws -> URL {
@@ -298,10 +323,131 @@ private final class ImportViewModel: ObservableObject {
             }
         }
     }
+
+    func startPlaying(touchMode: String) {
+        do {
+            try VaultDataImporter.writeTouchMode(touchMode, to: documents)
+            finish()
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+}
+
+private struct TouchModeChoice: Identifiable {
+    let id: String
+    let name: String
+    let summary: String
+    let icon: String
+}
+
+private struct ControlsView: View {
+    let finish: (String) -> Void
+
+    @State private var selectedMode = "hybrid"
+
+    private let modes = [
+        TouchModeChoice(id: "hybrid", name: "Hybrid", summary: "Tap the world directly. Precise screens fall back to a trackpad.", icon: "hand.tap"),
+        TouchModeChoice(id: "touch", name: "Direct", summary: "Every tap lands where your finger is. Fastest once familiar.", icon: "scope"),
+        TouchModeChoice(id: "trackpad", name: "Trackpad", summary: "Drag anywhere to move the cursor, then tap to click.", icon: "rectangle.and.hand.point.up.left"),
+    ]
+
+    private let gestures = [
+        ("hand.tap", "Tap", "Select, move, or use"),
+        ("hand.point.up.left", "Press and hold", "Open the action menu"),
+        ("hand.draw", "Two-finger drag", "Scroll lists and panels"),
+        ("arrow.down", "Three-finger swipe", "Back or Escape"),
+        ("highlighter", "Three-finger hold", "Highlight nearby objects"),
+        ("square.and.arrow.down", "Four-finger hold", "Quick save"),
+    ]
+
+    var body: some View {
+        ZStack {
+            Color(red: 0.075, green: 0.08, blue: 0.07).ignoresSafeArea()
+            HStack(alignment: .top, spacing: 46) {
+                VStack(alignment: .leading, spacing: 22) {
+                    Text("TOUCH CONTROLS")
+                        .font(.system(size: 18, weight: .black, design: .monospaced))
+                        .tracking(4)
+                        .foregroundStyle(Color(red: 0.82, green: 0.72, blue: 0.38))
+                    Text("Choose how VaultPad should feel.")
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+
+                    ForEach(modes) { mode in
+                        Button {
+                            selectedMode = mode.id
+                        } label: {
+                            HStack(spacing: 16) {
+                                Image(systemName: mode.icon)
+                                    .font(.title2)
+                                    .frame(width: 34)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(mode.name).font(.headline)
+                                    Text(mode.summary)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.white.opacity(0.62))
+                                        .lineLimit(2)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                Spacer()
+                                Image(systemName: selectedMode == mode.id ? "checkmark.circle.fill" : "circle")
+                                    .font(.title2)
+                            }
+                            .foregroundStyle(.white)
+                            .padding(18)
+                            .background(
+                                selectedMode == mode.id ? Color(red: 0.35, green: 0.29, blue: 0.12) : .white.opacity(0.055),
+                                in: RoundedRectangle(cornerRadius: 16)
+                            )
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(selectedMode == mode.id ? Color(red: 0.82, green: 0.72, blue: 0.38).opacity(0.7) : .white.opacity(0.08))
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .frame(maxWidth: 540, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("GESTURES")
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .tracking(3)
+                        .foregroundStyle(.white.opacity(0.48))
+
+                    ForEach(Array(gestures.enumerated()), id: \.offset) { _, gesture in
+                        HStack(spacing: 14) {
+                            Image(systemName: gesture.0)
+                                .frame(width: 28)
+                                .foregroundStyle(Color(red: 0.82, green: 0.72, blue: 0.38))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(gesture.1).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                Text(gesture.2).font(.caption).foregroundStyle(.white.opacity(0.55))
+                            }
+                        }
+                    }
+
+                    Spacer(minLength: 18)
+                    Button("Start Playing") { finish(selectedMode) }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .tint(Color(red: 0.65, green: 0.52, blue: 0.18))
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+                .padding(28)
+                .frame(width: 340)
+                .frame(minHeight: 510, alignment: .topLeading)
+                .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 22))
+            }
+            .padding(52)
+        }
+    }
 }
 
 private struct ImportView: View {
     @State private var showingImporter = false
+    @State private var showingControls = false
     @StateObject var model: ImportViewModel
 
     var body: some View {
@@ -345,8 +491,8 @@ private struct ImportView: View {
                             .foregroundStyle(model.phase == .ready ? .white.opacity(0.75) : Color(red: 1, green: 0.62, blue: 0.46))
                     }
 
-                    Button(model.phase == .ready ? "Play" : "Select Game Folder") {
-                        if model.phase == .ready { model.finish() } else { showingImporter = true }
+                    Button(model.phase == .ready ? "Continue" : "Select Game Folder") {
+                        if model.phase == .ready { showingControls = true } else { showingImporter = true }
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
@@ -362,6 +508,9 @@ private struct ImportView: View {
         }
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { model.importFolder(url) }
+        }
+        .fullScreenCover(isPresented: $showingControls) {
+            ControlsView { mode in model.startPlaying(touchMode: mode) }
         }
     }
 }
