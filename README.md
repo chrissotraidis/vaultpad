@@ -1,8 +1,24 @@
 # VaultPad
 
-**Feasibility study + complete build blueprint for a polished, iPad-first Fallout 2 experience, powered by Fallout 2 Community Edition.**
+**A neutral, touch-first iPad application powered by Fallout 2 Community Edition.**
 
-> Status: research & PRD complete (2026-07-17). Implementation not started. This repository currently contains the planning documents; the [PRD](docs/PRD.md) defines the product repo this becomes.
+> Status: active implementation. Native first-run import, automatic display configuration, reproducible iPad Simulator builds, and the first Hybrid touch-control loop are running on iPadOS 18.5 Simulator.
+
+VaultPad contains no game content. On first launch it asks you to select the folder from your own legally purchased copy, validates the required data, copies it into the app sandbox, and starts the community engine.
+
+## Run locally
+
+Requirements: macOS, Xcode, CMake 3.25+, and a recursive checkout.
+
+```bash
+./scripts/setup.sh
+./scripts/build-simulator.sh
+./scripts/install-simulator.sh
+```
+
+The installed app uses bundle id `com.chrissotraidis.vaultpad`, targets iPad, and presents the native importer when game data is absent. Local signing configuration lives in ignored `ios/Config/Signing.xcconfig`.
+
+Implementation evidence and current limitations are recorded in [the build plan](docs/BUILD_PLAN.md) and [Simulator playtests](docs/playtests/).
 
 ## Verdict (TL;DR)
 
@@ -33,7 +49,7 @@ All research is source-grounded: file paths and line numbers from full clones of
 
 ## Where to start (implementer)
 
-Read [PRD §A](docs/PRD.md#a-executive-verdict) for the verdict, then execute [§G — the exact first-week plan](docs/PRD.md#g-exact-first-week-plan). Day 1 is: build the existing engine and run it on an iPad before designing anything.
+Run `./scripts/setup.sh`, then read [the proof-gated build plan](docs/BUILD_PLAN.md). The full product and acceptance contract remains in the [PRD](docs/PRD.md).
 
 ## Legal posture
 
