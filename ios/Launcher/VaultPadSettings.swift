@@ -191,6 +191,7 @@ private enum SaveArchive {
 private final class VaultPadSettingsModel: ObservableObject {
     @Published var touchMode: String
     @Published var sensitivity: Double
+    @Published var toolbarVisible: Bool
     @Published var displayPreset: String
     @Published var message: String?
 
@@ -204,6 +205,7 @@ private final class VaultPadSettingsModel: ObservableObject {
         let config = documents.appendingPathComponent("fallout2.cfg")
         touchMode = VaultPadConfig.value(section: "input", key: "touch_mode", at: config) ?? "hybrid"
         sensitivity = Double(VaultPadConfig.value(section: "input", key: "touch_sensitivity", at: config) ?? "1") ?? 1
+        toolbarVisible = VaultPadConfig.value(section: "ui", key: "quick_toolbar_visible", at: config) != "0"
         displayPreset = VaultPadConfig.value(section: "vaultpad", key: "display_preset", at: config) ?? "comfort"
     }
 
@@ -211,7 +213,7 @@ private final class VaultPadSettingsModel: ObservableObject {
         do {
             try VaultPadConfig.set(section: "input", key: "touch_mode", value: touchMode, at: configURL)
             try VaultPadConfig.set(section: "input", key: "touch_sensitivity", value: String(format: "%.2f", sensitivity), at: configURL)
-            try VaultPadConfig.set(section: "ui", key: "quick_toolbar_visible", value: "1", at: configURL)
+            try VaultPadConfig.set(section: "ui", key: "quick_toolbar_visible", value: toolbarVisible ? "1" : "0", at: configURL)
             try VaultPadConfig.set(section: "vaultpad", key: "display_preset", value: displayPreset, at: configURL)
 
             let size = UIScreen.main.bounds.size
@@ -225,6 +227,17 @@ private final class VaultPadSettingsModel: ObservableObject {
             message = "Saved. Restart VaultPad to apply display and control changes."
         } catch {
             message = error.localizedDescription
+        }
+    }
+
+    func resetToDefaults() {
+        touchMode = "hybrid"
+        sensitivity = 1
+        toolbarVisible = true
+        displayPreset = "comfort"
+        save()
+        if message?.hasPrefix("Saved.") == true {
+            message = "Defaults restored. Restart VaultPad to apply them."
         }
     }
 
@@ -331,6 +344,11 @@ private struct VaultPadSettingsView: View {
                             .font(.subheadline.weight(.semibold))
                         Slider(value: $model.sensitivity, in: 0.5...2.0, step: 0.1)
                             .tint(Color(red: 0.82, green: 0.72, blue: 0.38))
+                        Picker("Quick toolbar", selection: $model.toolbarVisible) {
+                            Text("Toolbar on").tag(true)
+                            Text("Toolbar off").tag(false)
+                        }
+                        .pickerStyle(.segmented)
                     }
 
                     settingsCard("Display", icon: "ipad.landscape") {
@@ -378,6 +396,8 @@ private struct VaultPadSettingsView: View {
                             .foregroundStyle(.white.opacity(0.72))
                             .multilineTextAlignment(.trailing)
                     }
+                    Button("Reset Defaults") { model.resetToDefaults() }
+                        .buttonStyle(.bordered)
                     Button("Save Changes") { model.save() }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
