@@ -47,9 +47,10 @@ The engine was configured with `CMAKE_OSX_SYSROOT=iphonesimulator` and built suc
 
 The no-data launch reached the expected missing-asset alert. After copying only the supplied local game data into the private simulator container, the build reached the main menu, character selection, and the Temple of Trials. Detailed evidence and input defects are recorded in [the baseline playtest](playtests/2026-07-18-baseline.md).
 
-## Open Phase 0 gates
+## Remaining product gates
 
-- Fix the baseline touch coordinate and tap-release defects.
-- Complete the remaining combat, inventory, barter, save/load, and lifecycle matrix after those P0 controls are reliable.
+- Publish the verified local engine touch commit to the user-owned engine fork.
+- Add persistent Hybrid, Direct Touch, and Trackpad gameplay modes.
+- Complete the remaining combat, inventory, barter, save/load, and lifecycle matrix.
 
 Physical-device, Magic Keyboard, Bluetooth mouse, battery, TestFlight, and App Store results remain unverified until real hardware/services are used.
