@@ -41,6 +41,6 @@ The release packager repeats the archive-entry scan and rejects game data, saves
 
 ## Remaining release boundary
 
-- Run the final clean-install Simulator matrix against this Release build.
+- The final clean-install Simulator matrix passed; see [2026-07-18-clean-install.md](2026-07-18-clean-install.md).
 - Publish the local engine branch through an authorized fork and pin it in this repository so CI builds the tested implementation.
 - Test signing and runtime on a physical iPad before presenting this as a device-validated release.
