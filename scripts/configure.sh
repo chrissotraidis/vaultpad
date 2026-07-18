@@ -14,7 +14,9 @@ xcode-select -p >/dev/null 2>&1 || {
     exit 1
 }
 
-git -C "$repo_root" submodule update --init --recursive
+if ! git -C "$engine_dir" rev-parse --git-dir >/dev/null 2>&1; then
+    git -C "$repo_root" submodule update --init --recursive
+fi
 
 case "$platform" in
     simulator)
