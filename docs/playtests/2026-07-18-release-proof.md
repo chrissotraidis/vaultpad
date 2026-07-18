@@ -22,7 +22,7 @@ This checkpoint validates the unsigned device build and packaging path. It does 
 
 - File: `VaultPad-0.1.0-unsigned.ipa`
 - Size: 3.4 MB
-- SHA-256: `3e6833c176e98d3260149973b081e37eda5e11944864736c3f3fcfe6c6b03a67`
+- SHA-256: `65a0e99d73682338bd41be9f24595507a991427d545a425c7f30dbae4f8e43ee`
 - Checksum verification: pass
 - Layout: `Payload/VaultPad.app` only; no `__MACOSX` or AppleDouble entries
 - Included notices: `LICENSE.md` and `THIRD_PARTY_NOTICES.md`

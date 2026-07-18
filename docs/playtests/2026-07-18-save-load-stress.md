@@ -24,4 +24,4 @@ VaultPad completed **20 save/load cycles across three maps** without a save erro
 - Backgrounded and resumed three times while the load dialog was open; the dialog returned intact.
 - The final Klamath cycle ended with **Quick load game successfully loaded.** visible and gameplay responsive.
 
-This satisfies the PRD's simulator-verifiable `20 save/load cycles across 3 maps` acceptance check. The separate export/reinstall/import/load chain is tracked independently because it exercises the native archive workflow rather than engine slot stability.
+This satisfies the PRD's simulator-verifiable `20 save/load cycles across 3 maps` acceptance check. The separate export/reinstall/import/load chain also passed; see [2026-07-18-save-recovery.md](2026-07-18-save-recovery.md).
