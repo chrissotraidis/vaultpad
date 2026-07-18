@@ -295,6 +295,7 @@ private final class VaultPadSettingsModel: ObservableObject {
 private struct VaultPadSettingsView: View {
     @StateObject var model: VaultPadSettingsModel
     @State private var importingSaves = false
+    @State private var showingLicenses = false
     let close: () -> Void
 
     var body: some View {
@@ -366,6 +367,10 @@ private struct VaultPadSettingsView: View {
                     }
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.42))
+                    Button("Licenses & Notices") { showingLicenses = true }
+                        .buttonStyle(.plain)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color(red: 0.82, green: 0.72, blue: 0.38))
                     Spacer()
                     if let message = model.message {
                         Text(message)
@@ -384,6 +389,9 @@ private struct VaultPadSettingsView: View {
         .fileImporter(isPresented: $importingSaves, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { model.importSaves(from: url) }
         }
+        .sheet(isPresented: $showingLicenses) {
+            VaultPadLegalNoticesView()
+        }
     }
 
     private func settingsCard<Content: View>(_ title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
@@ -397,6 +405,38 @@ private struct VaultPadSettingsView: View {
         .padding(22)
         .frame(maxWidth: .infinity, minHeight: 245, alignment: .topLeading)
         .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 18))
+    }
+}
+
+private struct VaultPadLegalNoticesView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    private var notices: String {
+        ["LICENSE.md", "THIRD_PARTY_NOTICES.md"].compactMap { name in
+            guard let url = Bundle.main.url(forResource: name, withExtension: nil) else { return nil }
+            return try? String(contentsOf: url, encoding: .utf8)
+        }.joined(separator: "\n\n---\n\n")
+    }
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                Text(notices.isEmpty ? "License files are unavailable in this build." : notices)
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(24)
+            }
+            .background(Color(red: 0.075, green: 0.08, blue: 0.07))
+            .foregroundStyle(.white.opacity(0.82))
+            .navigationTitle("Licenses & Notices")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
     }
 }
 

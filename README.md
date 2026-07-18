@@ -1,56 +1,57 @@
 # VaultPad
 
-**A neutral, touch-first iPad application powered by Fallout 2 Community Edition.**
+VaultPad is a neutral, touch-first iPad app for running Fallout 2 Community Edition with game data supplied by the user.
 
-> Status: active implementation. Native first-run import, automatic display configuration, reproducible iPad Simulator builds, and the first Hybrid touch-control loop are running on iPadOS 18.5 Simulator.
+> Status: local beta validated on an 11-inch iPad Pro Simulator running iPadOS 18.5. Native onboarding, touch controls, lifecycle saves, dialogue, barter, combat, inventory, and world-map travel have been exercised through the real game UI. Physical-device, hardware pointer, TestFlight, and App Store testing remain open.
 
-VaultPad contains no game content. On first launch it asks you to select the folder from your own legally purchased copy, validates the required data, copies it into the app sandbox, and starts the community engine. Its app icon and native shell use original, neutral VaultPad artwork rather than inherited game branding.
+VaultPad contains no Fallout game content. First launch asks for the folder from a legally purchased copy, validates the required files, and copies them into the app's private Documents container. Nothing is downloaded or uploaded.
 
-## Run locally
+## What works
 
-Requirements: macOS, Xcode, CMake 3.25+, and a recursive checkout.
+- Native Files-based first-run import with validation and recoverable errors.
+- Automatic iPad display configuration with Comfort and Native presets.
+- Direct, Hybrid, and Trackpad touch modes with persistent sensitivity.
+- Touch-native combat, inventory, dialogue, barter, quantity entry, and world-map travel.
+- Background quicksave, foreground audio recovery, and save import/export.
+- Original VaultPad name, icon, onboarding, settings, and legal notices.
+- Reproducible Simulator and unsigned arm64 device builds.
+
+The playtest record is in [`docs/playtests/`](docs/playtests/) and the acceptance loop is in [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md).
+
+## Build and run
+
+Requirements: macOS, Xcode, CMake 3.25 or newer, and a recursive checkout.
 
 ```bash
 ./scripts/setup.sh
-./scripts/build-simulator.sh
+./scripts/build-simulator.sh Release
 ./scripts/install-simulator.sh
 ```
 
-The installed app uses bundle id `com.chrissotraidis.vaultpad`, targets iPad, and presents the native importer when game data is absent. Local signing configuration lives in ignored `ios/Config/Signing.xcconfig`.
+Build an unsigned arm64 device app and IPA:
 
-Implementation evidence and current limitations are recorded in [the build plan](docs/BUILD_PLAN.md) and [Simulator playtests](docs/playtests/).
+```bash
+./scripts/build-device.sh Release
+./scripts/package-release.sh 0.1.0 Release
+```
 
-## Verdict (TL;DR)
+Artifacts are written under `out/`, which is ignored by Git. See [`docs/INSTALL.md`](docs/INSTALL.md) for signing, Simulator selection, and sideloading notes.
 
-**Strong go — as an iPad *productization* project, not an engine port.** The engine already builds for iOS, ships an unsigned IPA people sideload onto iPads today, and contains a working touch layer. What's missing is the product: native game-data import through the Files app, automatic resolution configuration, hybrid direct-touch controls, on-screen keyboard everywhere it's needed, background autosave, and a reproducible clone→sign→Run developer experience. Every one of those gaps is a documented open issue with no owner.
+## Repository map
 
-Key strategic facts:
-
-- **Build on the active fork** [`fallout2-ce/fallout2-ce`](https://github.com/fallout2-ce/fallout2-ce), not the dormant upstream (`alexbatalov/fallout2-ce`, no commits since Feb 2025). The fork is 880 commits ahead, merged iPad touch work in April 2026, and accepts outside iOS PRs in ~2 weeks.
-- **The license permits this** (Sustainable Use License: free, non-commercial distribution of modified builds — upstream ships IPAs itself). **The trademark does not permit the branding**: neutral name (VaultPad), original art, "Fallout 2" mentioned only descriptively.
-- Users must supply their own legally purchased game data (GOG/Steam/Epic/CD). **No game assets are ever included or distributed.**
-- Distribution: GitHub Releases + AltStore/SideStore first; TestFlight later; App Store as an optional attempt (~50–65% first-pass with strict hygiene, per ScummVM precedent) — never the load-bearing channel.
-- Effort to a polished v1.0: **~58 engineer-days realistic** (34 optimistic / 111 pessimistic).
-
-## Documents
-
-| Document | What it is |
+| Path | Purpose |
 |---|---|
-| **[docs/PRD.md](docs/PRD.md)** | The master document: executive verdict, current-state audit, gap analysis, architecture, numbered implementation roadmap, phased release plan, day-by-day first week, repo file map, risk register, effort estimates, go/no-go experiments, final recommendation, all 22 research areas, proposed scripts/CI |
-| [docs/research/01](docs/research/01-build-system-ci-releases.md) | Build system, iOS platform layer, CI, release pipeline audit (upstream) |
-| [docs/research/02](docs/research/02-licensing-distribution-appstore.md) | Licensing (SUL), copyright, trademark, App Store precedent, sideloading landscape |
-| [docs/research/03](docs/research/03-input-touch-keyboard.md) | Touch/mouse/keyboard source audit — interaction-by-interaction |
-| [docs/research/04](docs/research/04-rendering-audio-lifecycle-saves.md) | Rendering, display, audio, app lifecycle, filesystem, saves audit |
-| [docs/research/05](docs/research/05-mod-compatibility.md) | Mod compatibility (sfall, Restoration Project, total conversions) |
-| [docs/research/06](docs/research/06-ecosystem-community-names.md) | Repo health, forks, community demand, naming/trademark check |
-| [docs/research/07](docs/research/07-fork-ios-audit.md) | The active fork's iOS layer: what it fixed, what remains open |
+| `engine/` | Pinned Fallout 2 Community Edition submodule and focused iPad changes |
+| `ios/Launcher/` | Native onboarding, importer, settings, saves, and lifecycle shell |
+| `ios/Assets.xcassets/` | Original VaultPad app artwork |
+| `scripts/` | Setup, Simulator/device builds, packaging, and repository checks |
+| `docs/PRD.md` | Product and acceptance contract |
+| `docs/playtests/` | Dated Simulator evidence and remaining limitations |
 
-All research is source-grounded: file paths and line numbers from full clones of both repos, downloaded-and-inspected release artifacts, GitHub API data, and primary documents — access-dated 2026-07-17. Community reports are labeled anecdotal. Nothing herein is legal advice.
+## Legal
 
-## Where to start (implementer)
+VaultPad is unofficial, free, and non-commercial. It is not affiliated with, endorsed, or sponsored by Bethesda Softworks, ZeniMax Media, or Microsoft. Fallout is a registered trademark of ZeniMax Media Inc.
 
-Run `./scripts/setup.sh`, then read [the proof-gated build plan](docs/BUILD_PLAN.md). The full product and acceptance contract remains in the [PRD](docs/PRD.md).
+The app distributes no game assets. Users must provide data from a legally purchased copy. Engine code derives from Fallout 2 Community Edition under the included [Sustainable Use License](LICENSE.md); dependency notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). This is not legal advice.
 
-## Legal posture
-
-VaultPad is an unofficial, free, fair-code community project. It is not affiliated with, endorsed, or sponsored by Bethesda Softworks, ZeniMax Media, or Microsoft. Fallout is a registered trademark of ZeniMax Media Inc. This project contains and distributes no game content; a legally purchased copy of the original game is required. Engine code derives from Fallout 2 Community Edition under the [Sustainable Use License](https://github.com/fallout2-ce/fallout2-ce/blob/main/LICENSE.md).
+The original feasibility research remains available under [`docs/research/`](docs/research/).
