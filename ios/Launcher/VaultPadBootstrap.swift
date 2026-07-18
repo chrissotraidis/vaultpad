@@ -355,6 +355,7 @@ private struct ControlsView: View {
     private let gestures = [
         ("hand.tap", "Tap", "Select, move, or use"),
         ("hand.point.up.left", "Press and hold", "Open the action menu"),
+        ("hand.tap.fill", "Two-finger tap", "Change the world cursor"),
         ("hand.draw", "Two-finger drag", "Scroll lists and panels"),
         ("arrow.down", "Three-finger swipe", "Back or Escape"),
         ("highlighter", "Three-finger hold", "Highlight nearby objects"),
