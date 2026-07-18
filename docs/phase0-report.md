@@ -41,11 +41,15 @@ CoreSimulator access was verified outside the workspace sandbox. Primary playtes
 - iPad Pro 13-inch (M5), iOS 26.5
 - iPad mini (A17 Pro), iOS 18.5/26.5
 
+## Simulator build and launch
+
+The engine was configured with `CMAKE_OSX_SYSROOT=iphonesimulator` and built successfully as an arm64 iOS Simulator application. The checked-in `scripts/build-simulator.sh` and `scripts/install-simulator.sh` path then passed end to end: configure, build, install, private data import, and launch. It was installed on the 11-inch iPad Pro (M4), iOS 18.5 profile with the visible name **VaultPad** and bundle id `com.chrissotraidis.vaultpad`.
+
+The no-data launch reached the expected missing-asset alert. After copying only the supplied local game data into the private simulator container, the build reached the main menu, character selection, and the Temple of Trials. Detailed evidence and input defects are recorded in [the baseline playtest](playtests/2026-07-18-baseline.md).
+
 ## Open Phase 0 gates
 
-- Add and prove a simulator preset.
-- Launch the engine on an iPad Simulator.
-- Import the supplied local game data without adding it to Git.
-- Complete the baseline touch-control playtest matrix.
+- Fix the baseline touch coordinate and tap-release defects.
+- Complete the remaining combat, inventory, barter, save/load, and lifecycle matrix after those P0 controls are reliable.
 
 Physical-device, Magic Keyboard, Bluetooth mouse, battery, TestFlight, and App Store results remain unverified until real hardware/services are used.
