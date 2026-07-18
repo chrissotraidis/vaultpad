@@ -25,6 +25,9 @@
 | Quantity label targets | Pass after fix | The complete `DONE` and `CANCEL` words now act as touch targets instead of requiring their small lamps. |
 | `OFFER` label target | Pass after fix | Touching the visible label submitted a player item; Aldo accepted it and displayed `OK, that's a good trade.` |
 | `TALK` label target | Pass after fix | Touching the visible label returned from barter to the dialogue response screen. |
+| Area exit | Pass | Direct touch walked from Aldo to Klamath Downtown's east exit and transitioned to the world map. |
+| World-map travel | Pass | Touch selected Arroyo from Klamath; the party marker traversed the map and advanced the game clock. |
+| Town-map entry | Pass | Touch opened Arroyo's town map, selected `Village`, and loaded the playable village map. |
 
 ## Iterations made from the session
 
@@ -35,7 +38,6 @@
 
 ## Remaining acceptance work
 
-- Exercise Klamath area transitions and the world map touch flow.
 - Verify an unsigned device build and release configuration.
 - Run the final legal/tree scan, clean-install acceptance matrix, and artifact checksum checks.
 
