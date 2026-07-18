@@ -4,7 +4,7 @@
 
 > Status: active implementation. Native first-run import, automatic display configuration, reproducible iPad Simulator builds, and the first Hybrid touch-control loop are running on iPadOS 18.5 Simulator.
 
-VaultPad contains no game content. On first launch it asks you to select the folder from your own legally purchased copy, validates the required data, copies it into the app sandbox, and starts the community engine.
+VaultPad contains no game content. On first launch it asks you to select the folder from your own legally purchased copy, validates the required data, copies it into the app sandbox, and starts the community engine. Its app icon and native shell use original, neutral VaultPad artwork rather than inherited game branding.
 
 ## Run locally
 
