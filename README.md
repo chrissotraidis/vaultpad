@@ -16,7 +16,7 @@ VaultPad contains no Fallout game content. First launch asks for the folder from
 - Original VaultPad name, icon, onboarding, settings, and legal notices.
 - Reproducible Simulator and unsigned arm64 device builds.
 
-The playtest record is in [`docs/playtests/`](docs/playtests/), including the [quick-toolbar clarity audit](docs/audits/2026-07-18-toolbar/README.md), and the acceptance loop is in [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md). See [`docs/CONTROLS.md`](docs/CONTROLS.md) for the touch map, [`docs/MODS.md`](docs/MODS.md) for the supported mod boundary, and [`docs/FAQ.md`](docs/FAQ.md) for recovery and distribution answers.
+The playtest record is in [`docs/playtests/`](docs/playtests/), including the [quick-toolbar clarity audit](docs/audits/2026-07-18-toolbar/README.md) and [current release proof](docs/playtests/2026-07-18-release-proof.md). The acceptance loop is in [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md). See [`docs/CONTROLS.md`](docs/CONTROLS.md) for the touch map, [`docs/MODS.md`](docs/MODS.md) for the supported mod boundary, and [`docs/FAQ.md`](docs/FAQ.md) for recovery and distribution answers.
 
 ## Build and run
 
