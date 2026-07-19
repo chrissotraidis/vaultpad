@@ -1,0 +1,272 @@
+#ifndef INTERPRETER_H
+#define INTERPRETER_H
+
+#include "combat_defs.h"
+#include "object.h"
+#include <setjmp.h>
+
+#include <vector>
+
+namespace fallout {
+
+// The maximum number of opcodes.
+//
+// SFALL: Increase number of opcodes.
+#define OPCODE_MAX_COUNT 768
+
+typedef enum Opcode {
+    OPCODE_NOOP = 0x8000,
+    OPCODE_PUSH = 0x8001,
+    OPCODE_ENTER_CRITICAL_SECTION = 0x8002,
+    OPCODE_LEAVE_CRITICAL_SECTION = 0x8003,
+    OPCODE_JUMP = 0x8004,
+    OPCODE_CALL = 0x8005,
+    OPCODE_CALL_AT = 0x8006,
+    OPCODE_CALL_WHEN = 0x8007,
+    OPCODE_CALLSTART = 0x8008,
+    OPCODE_EXEC = 0x8009,
+    OPCODE_SPAWN = 0x800A,
+    OPCODE_FORK = 0x800B,
+    OPCODE_A_TO_D = 0x800C,
+    OPCODE_D_TO_A = 0x800D,
+    OPCODE_EXIT = 0x800E,
+    OPCODE_DETACH = 0x800F,
+    OPCODE_EXIT_PROGRAM = 0x8010,
+    OPCODE_STOP_PROGRAM = 0x8011,
+    OPCODE_FETCH_GLOBAL = 0x8012,
+    OPCODE_STORE_GLOBAL = 0x8013,
+    OPCODE_FETCH_EXTERNAL = 0x8014,
+    OPCODE_STORE_EXTERNAL = 0x8015,
+    OPCODE_EXPORT_VARIABLE = 0x8016,
+    OPCODE_EXPORT_PROCEDURE = 0x8017,
+    OPCODE_SWAP = 0x8018,
+    OPCODE_SWAPA = 0x8019,
+    OPCODE_POP = 0x801A,
+    OPCODE_DUP = 0x801B,
+    OPCODE_POP_RETURN = 0x801C,
+    OPCODE_POP_EXIT = 0x801D,
+    OPCODE_POP_ADDRESS = 0x801E,
+    OPCODE_POP_FLAGS = 0x801F,
+    OPCODE_POP_FLAGS_RETURN = 0x8020,
+    OPCODE_POP_FLAGS_EXIT = 0x8021,
+    OPCODE_POP_FLAGS_RETURN_EXTERN = 0x8022,
+    OPCODE_POP_FLAGS_EXIT_EXTERN = 0x8023,
+    OPCODE_POP_FLAGS_RETURN_VAL_EXTERN = 0x8024,
+    OPCODE_POP_FLAGS_RETURN_VAL_EXIT = 0x8025,
+    OPCODE_POP_FLAGS_RETURN_VAL_EXIT_EXTERN = 0x8026,
+    OPCODE_CHECK_PROCEDURE_ARGUMENT_COUNT = 0x8027,
+    OPCODE_LOOKUP_PROCEDURE_BY_NAME = 0x8028,
+    OPCODE_POP_BASE = 0x8029,
+    OPCODE_POP_TO_BASE = 0x802A,
+    OPCODE_PUSH_BASE = 0x802B,
+    OPCODE_SET_GLOBAL = 0x802C,
+    OPCODE_FETCH_PROCEDURE_ADDRESS = 0x802D,
+    OPCODE_DUMP = 0x802E,
+    OPCODE_IF = 0x802F,
+    OPCODE_WHILE = 0x8030,
+    OPCODE_STORE = 0x8031,
+    OPCODE_FETCH = 0x8032,
+    OPCODE_EQUAL = 0x8033,
+    OPCODE_NOT_EQUAL = 0x8034,
+    OPCODE_LESS_THAN_EQUAL = 0x8035,
+    OPCODE_GREATER_THAN_EQUAL = 0x8036,
+    OPCODE_LESS_THAN = 0x8037,
+    OPCODE_GREATER_THAN = 0x8038,
+    OPCODE_ADD = 0x8039,
+    OPCODE_SUB = 0x803A,
+    OPCODE_MUL = 0x803B,
+    OPCODE_DIV = 0x803C,
+    OPCODE_MOD = 0x803D,
+    OPCODE_AND = 0x803E,
+    OPCODE_OR = 0x803F,
+    OPCODE_BITWISE_AND = 0x8040,
+    OPCODE_BITWISE_OR = 0x8041,
+    OPCODE_BITWISE_XOR = 0x8042,
+    OPCODE_BITWISE_NOT = 0x8043,
+    OPCODE_FLOOR = 0x8044,
+    OPCODE_NOT = 0x8045,
+    OPCODE_NEGATE = 0x8046,
+    OPCODE_WAIT = 0x8047,
+    OPCODE_CANCEL = 0x8048,
+    OPCODE_CANCEL_ALL = 0x8049,
+    OPCODE_START_CRITICAL = 0x804A,
+    OPCODE_END_CRITICAL = 0x804B,
+} Opcode;
+
+typedef enum ProcedureFlags {
+    PROCEDURE_FLAG_TIMED = 0x01,
+    PROCEDURE_FLAG_CONDITIONAL = 0x02,
+    PROCEDURE_FLAG_IMPORTED = 0x04,
+    PROCEDURE_FLAG_EXPORTED = 0x08,
+    PROCEDURE_FLAG_CRITICAL = 0x10,
+} ProcedureFlags;
+
+typedef enum ProgramFlags {
+    PROGRAM_FLAG_EXITED = 0x01,
+    PROGRAM_FLAG_RUNNING = 0x02,
+    PROGRAM_FLAG_FATAL_ERROR = 0x04,
+    PROGRAM_FLAG_STOPPED = 0x08,
+
+    // Program is in waiting state with `checkWaitFunc` set.
+    PROGRAM_IS_WAITING = 0x10,
+    // Program has an attached child created via O_CALLSTART.
+    // Also set in many opcodes that might trigger event procedures (probably to prevent them from disrupting current execution).
+    PROGRAM_FLAG_CHILD_CALL = 0x20,
+    // Set when current synchronous procedure call is finished.
+    PROGRAM_FLAG_FINISHED = 0x40,
+    PROGRAM_FLAG_CRITICAL_SECTION = 0x80,
+    // Program has an attached child created via O_SPAWN.
+    PROGRAM_FLAG_CHILD_SPAWN = 0x0100,
+} ProgramFlags;
+
+enum RawValueType {
+    RAW_VALUE_TYPE_OPCODE = 0x8000,
+    RAW_VALUE_TYPE_INT = 0x4000,
+    RAW_VALUE_TYPE_FLOAT = 0x2000,
+    RAW_VALUE_TYPE_STATIC_STRING = 0x1000,
+    RAW_VALUE_TYPE_DYNAMIC_STRING = 0x0800,
+};
+
+#define VALUE_TYPE_MASK 0xF7FF
+
+#define VALUE_TYPE_INT 0xC001
+#define VALUE_TYPE_FLOAT 0xA001
+#define VALUE_TYPE_STRING 0x9001
+#define VALUE_TYPE_DYNAMIC_STRING 0x9801
+#define VALUE_TYPE_PTR 0xE001
+
+typedef unsigned short opcode_t;
+
+typedef struct Procedure {
+    int nameOffset;
+    int flags;
+    int time;
+    int conditionOffset;
+    int bodyOffset;
+    int argCount;
+} Procedure;
+
+struct Program;
+
+class ProgramValue {
+public:
+    ProgramValue();
+    ProgramValue(int value);
+    ProgramValue(unsigned int value);
+    ProgramValue(bool value);
+    ProgramValue(float value);
+    ProgramValue(Object* value);
+    // TODO: better approach for supporting different object types?
+    ProgramValue(Attack* value);
+
+    opcode_t opcode;
+    union {
+        int integerValue;
+        float floatValue;
+        void* pointerValue;
+    };
+
+    bool isEmpty() const;
+    bool isInt() const;
+    bool isFloat() const;
+    bool isString() const;
+    float asFloat() const;
+    bool isPointer() const;
+    int asInt() const;
+    Object* asObject() const;
+    const char* asString(Program* program) const;
+    const char* typeDebugString() const;
+};
+
+typedef std::vector<ProgramValue> ProgramStack;
+typedef int(InterpretCheckWaitFunc)(Program* program);
+
+// It's size in original code is 144 (0x8C) bytes due to the different
+// size of `jmp_buf`.
+struct Program {
+    char* name;
+    unsigned char* data;
+    struct Program* parent;
+    struct Program* child;
+    int instructionPointer; // current pos in data
+    int framePointer; // saved stack 1 pos - probably beginning of local variables - probably called base
+    int basePointer; // saved stack 1 pos - probably beginning of global variables
+    unsigned char* staticStrings; // static strings table
+    unsigned char* dynamicStrings; // dynamic strings table
+    unsigned char* identifiers;
+    unsigned char* procedures;
+    jmp_buf env;
+    unsigned int waitEnd; // end time of timer (field_74 + wait time)
+    unsigned int waitStart; // time when wait was called
+    int startTime; // time when program begin execution (for the first time), in seconds, -1 - program never executed; not used
+    InterpretCheckWaitFunc* checkWaitFunc;
+    int flags; // flags
+    int windowId;
+    bool exited;
+    ProgramStack* stackValues;
+    ProgramStack* returnStackValues;
+
+    int procedureCount() const;
+};
+
+typedef unsigned int(InterpretTimerFunc)();
+typedef void OpcodeHandler(Program* program);
+
+extern OpcodeHandler* gInterpreterOpcodeHandlers[OPCODE_MAX_COUNT];
+
+extern int _TimeOut;
+
+char* _interpretMangleName(char* s);
+void _interpretOutputFunc(int (*func)(const char*));
+int _interpretOutput(const char* format, ...);
+[[noreturn]] void programFatalError(const char* str, ...);
+void programPrintError(const char* format, ...);
+void interpreterStringRefCountDecrease(Program* program, opcode_t opcode, int value);
+void programFree(Program* program);
+Program* programCreateByPath(const char* path);
+char* programGetString(Program* program, opcode_t opcode, int offset);
+char* programGetIdentifier(Program* program, int offset);
+int programPushString(Program* program, const char* const string);
+void interpreterRegisterOpcodeHandlers();
+void _interpretClose();
+// Runs interpreter for a given number of instructions.
+// For a typical script, if instructionPointer is 0 and numInstructions < 0, will execute script header, then 'start' procedure and then exit via O_EXIT_PROG.
+void programInterpret(Program* program, int numInstructions);
+void programExecuteProcedureAsync(Program* program, int procedureIndex);
+int programFindProcedure(Program* prg, const char* name);
+void programExecuteProcedure(Program* program, int procedureIndex);
+void programListNodeCreate(Program* program);
+void runProgram(Program* program);
+Program* runScript(char* name);
+void _updatePrograms();
+void programListFree();
+void interpreterRegisterOpcode(int opcode, OpcodeHandler* handler);
+
+void programStackPushValue(Program* program, const ProgramValue& programValue);
+void programStackPushInteger(Program* program, int value);
+void programStackPushFloat(Program* program, float value);
+void programStackPushString(Program* program, const char* const string);
+void programStackPushPointer(Program* program, void* value);
+
+ProgramValue programStackPopValue(Program* program);
+int programStackPopInteger(Program* program);
+char* programStackPopString(Program* program);
+void* programStackPopPointer(Program* program);
+
+void programReturnStackPushValue(Program* program, ProgramValue& programValue);
+void programReturnStackPushInteger(Program* program, int value);
+void programReturnStackPushPointer(Program* program, void* value);
+
+ProgramValue programReturnStackPopValue(Program* program);
+int programReturnStackPopInteger(Program* program);
+void* programReturnStackPopPointer(Program* program);
+
+opcode_t stackReadInt16(unsigned char* data, int pos);
+int stackReadInt32(unsigned char* data, int pos);
+
+ProgramValue programMakeString(Program* program, const char* str);
+ProgramValue programMakeInt(Program* program, int val);
+
+} // namespace fallout
+
+#endif /* INTERPRETER_H */

@@ -1,0 +1,354 @@
+#include "game_movie.h"
+
+#include <stdio.h>
+#include <string.h>
+
+#include "color.h"
+#include "cycle.h"
+#include "debug.h"
+#include "game.h"
+#include "game_mouse.h"
+#include "game_sound.h"
+#include "input.h"
+#include "mouse.h"
+#include "movie.h"
+#include "movie_effect.h"
+#include "palette.h"
+#include "platform_compat.h"
+#include "settings.h"
+#include "svga.h"
+#include "text_font.h"
+#include "touch.h"
+#include "window_manager.h"
+
+namespace fallout {
+
+static char* gameMovieBuildSubtitlesFilePath(char* movieFilePath);
+
+// 0x50352A
+static const float flt_50352A = 0.032258064f;
+
+// 0x518DA0 movie_list
+static const char* gMovieFileNames[MOVIE_COUNT] = {
+    "iplogo.mve",
+    "intro.mve",
+    "elder.mve",
+    "vsuit.mve",
+    "afailed.mve",
+    "adestroy.mve",
+    "car.mve",
+    "cartucci.mve",
+    "timeout.mve",
+    "tanker.mve",
+    "enclave.mve",
+    "derrick.mve",
+    "artimer1.mve",
+    "artimer2.mve",
+    "artimer3.mve",
+    "artimer4.mve",
+    "credits.mve",
+};
+
+// 0x518DE4 subtitlePalList
+static const char* gMoviePaletteFilePaths[MOVIE_COUNT] = {
+    nullptr,
+    "art\\cuts\\introsub.pal",
+    "art\\cuts\\eldersub.pal",
+    nullptr,
+    "art\\cuts\\artmrsub.pal",
+    nullptr,
+    nullptr,
+    nullptr,
+    "art\\cuts\\artmrsub.pal",
+    nullptr,
+    nullptr,
+    nullptr,
+    "art\\cuts\\artmrsub.pal",
+    "art\\cuts\\artmrsub.pal",
+    "art\\cuts\\artmrsub.pal",
+    "art\\cuts\\artmrsub.pal",
+    "art\\cuts\\crdtssub.pal",
+};
+
+// 0x518E28 gmMovieIsPlaying
+static bool gGameMovieIsPlaying = false;
+
+// 0x518E2C gmPaletteWasFaded
+static bool gGameMovieFaded = false;
+
+// 0x596C78 gmovie_played_list
+static unsigned char gGameMoviesSeen[MOVIE_COUNT];
+
+// 0x596C89 full_path
+static char gGameMovieSubtitlesFilePath[COMPAT_MAX_PATH];
+
+// gmovie_init
+// 0x44E5C0 gmovie_init
+int gameMoviesInit()
+{
+    int volume = 0;
+    if (backgroundSoundIsEnabled()) {
+        volume = backgroundSoundGetVolume();
+    }
+
+    movieSetVolume(volume);
+
+    movieSetBuildSubtitleFilePathProc(gameMovieBuildSubtitlesFilePath);
+
+    memset(gGameMoviesSeen, 0, sizeof(gGameMoviesSeen));
+
+    gGameMovieIsPlaying = false;
+    gGameMovieFaded = false;
+
+    return 0;
+}
+
+// 0x44E60C gmovie_reset
+void gameMoviesReset()
+{
+    memset(gGameMoviesSeen, 0, sizeof(gGameMoviesSeen));
+
+    gGameMovieIsPlaying = false;
+    gGameMovieFaded = false;
+}
+
+// 0x44E638 gmovie_load
+int gameMoviesLoad(File* stream)
+{
+    if (fileRead(gGameMoviesSeen, sizeof(*gGameMoviesSeen), MOVIE_COUNT, stream) != MOVIE_COUNT) {
+        return -1;
+    }
+
+    return 0;
+}
+
+// 0x44E664 gmovie_save
+int gameMoviesSave(File* stream)
+{
+    if (fileWrite(gGameMoviesSeen, sizeof(*gGameMoviesSeen), MOVIE_COUNT, stream) != MOVIE_COUNT) {
+        return -1;
+    }
+
+    return 0;
+}
+
+// gmovie_play
+// 0x44E690 gmovie_play
+int gameMoviePlay(int movie, int flags)
+{
+    gGameMovieIsPlaying = true;
+
+    const char* movieFileName = gMovieFileNames[movie];
+    debugPrint("\nPlaying movie: %s\n", movieFileName);
+
+    const char* language = settings.system.language.c_str();
+    char movieFilePath[COMPAT_MAX_PATH];
+    int movieFileSize;
+    bool movieFound = false;
+
+    if (compat_stricmp(language, ENGLISH) != 0) {
+        snprintf(movieFilePath, sizeof(movieFilePath), "art\\%s\\cuts\\%s", language, gMovieFileNames[movie]);
+        movieFound = dbGetFileSize(movieFilePath, &movieFileSize) == 0;
+    }
+
+    if (!movieFound) {
+        snprintf(movieFilePath, sizeof(movieFilePath), "art\\cuts\\%s", gMovieFileNames[movie]);
+        movieFound = dbGetFileSize(movieFilePath, &movieFileSize) == 0;
+    }
+
+    if (!movieFound) {
+        debugPrint("\ngmovie_play() - Error: Unable to open %s\n", gMovieFileNames[movie]);
+        gGameMovieIsPlaying = false;
+        return -1;
+    }
+
+    if ((flags & GAME_MOVIE_FADE_IN) != 0) {
+        paletteFadeTo(gPaletteBlack);
+        gGameMovieFaded = true;
+    }
+
+    int win = windowCreate(0,
+        0,
+        screenGetWidth(),
+        screenGetHeight(),
+        0,
+        WINDOW_MODAL | WINDOW_MOVE_ON_TOP);
+    if (win == -1) {
+        gGameMovieIsPlaying = false;
+        return -1;
+    }
+
+    if ((flags & GAME_MOVIE_STOP_MUSIC) != 0) {
+        backgroundSoundDelete();
+    } else if ((flags & GAME_MOVIE_PAUSE_MUSIC) != 0) {
+        backgroundSoundPause();
+    }
+
+    windowRefresh(win);
+
+    bool subtitlesEnabled = settings.preferences.subtitles;
+    int movieFlags = MOVIE_FLAG_DIRECT_CENTERED;
+    if (subtitlesEnabled) {
+        char* subtitlesFilePath = gameMovieBuildSubtitlesFilePath(movieFilePath);
+
+        int subtitlesFileSize;
+        if (dbGetFileSize(subtitlesFilePath, &subtitlesFileSize) == 0) {
+            movieFlags = MOVIE_FLAG_DIRECT_CENTERED | MOVIE_FLAG_SUBTITLES;
+        } else {
+            subtitlesEnabled = false;
+        }
+    }
+
+    movieSetFlags(movieFlags);
+
+    int oldTextColor;
+    int oldFont;
+    if (subtitlesEnabled) {
+        const char* subtitlesPaletteFilePath;
+        if (gMoviePaletteFilePaths[movie] != nullptr) {
+            subtitlesPaletteFilePath = gMoviePaletteFilePaths[movie];
+        } else {
+            subtitlesPaletteFilePath = "art\\cuts\\subtitle.pal";
+        }
+
+        colorPaletteLoad(subtitlesPaletteFilePath);
+
+        oldTextColor = scriptWindowGetTextColor();
+        scriptWindowSetTextColor(1.0, 1.0, 1.0);
+
+        oldFont = fontGetCurrent();
+        windowSetFont(101);
+    }
+
+    bool cursorWasHidden = cursorIsHidden();
+    if (cursorWasHidden) {
+        gameMouseSetCursor(MOUSE_CURSOR_NONE);
+        mouseShowCursor();
+    }
+
+    while (mouseGetEvent() != 0) {
+        _mouse_info();
+    }
+
+    mouseHideCursor();
+    colorCycleDisable();
+
+    movieEffectsLoad(movieFilePath);
+
+    _zero_vid_mem();
+    _movieRun(win, movieFilePath);
+
+    int pressed = 0;
+    int buttons;
+    do {
+        if (!_moviePlaying() || _game_user_wants_to_quit || inputGetInput() != -1) {
+            break;
+        }
+
+        Gesture gesture;
+        if (touch_get_gesture(&gesture) && gesture.state == kEnded) {
+            break;
+        }
+
+        int x;
+        int y;
+        _mouse_get_raw_state(&x, &y, &buttons);
+
+        pressed |= buttons;
+        // Exit on mouse only after a click cycle: observe left/right down at
+        // least once, then wait until both are released.
+    } while (((pressed & 1) == 0 && (pressed & 2) == 0) || (buttons & 1) != 0 || (buttons & 2) != 0);
+
+    _movieStop();
+    _moviefx_stop();
+    _movieUpdate();
+    paletteSetEntries(gPaletteBlack);
+
+    gGameMoviesSeen[movie] = 1;
+
+    colorCycleEnable();
+
+    gameMouseSetCursor(MOUSE_CURSOR_ARROW);
+
+    if (!cursorWasHidden) {
+        mouseShowCursor();
+    }
+
+    if (subtitlesEnabled) {
+        colorPaletteLoad("color.pal");
+
+        windowSetFont(oldFont);
+
+        float r = (float)((Color2RGB(oldTextColor) & 0x7C00) >> 10) * flt_50352A;
+        float g = (float)((Color2RGB(oldTextColor) & 0x3E0) >> 5) * flt_50352A;
+        float b = (float)(Color2RGB(oldTextColor) & 0x1F) * flt_50352A;
+        scriptWindowSetTextColor(r, g, b);
+    }
+
+    windowDestroy(win);
+
+    // CE: Destroying a window redraws only content it was covering (centered
+    // 640x480). This leads to everything outside this rect to remain black.
+    windowRefreshAll(&_scr_size);
+
+    if ((flags & GAME_MOVIE_PAUSE_MUSIC) != 0) {
+        backgroundSoundResume();
+    }
+
+    if ((flags & GAME_MOVIE_FADE_OUT) != 0) {
+        if (!subtitlesEnabled) {
+            colorPaletteLoad("color.pal");
+        }
+
+        paletteFadeTo(_cmap);
+        gGameMovieFaded = false;
+    }
+
+    gGameMovieIsPlaying = false;
+    return 0;
+}
+
+// 0x44EAE4 gmPaletteFinish
+void gameMovieFadeOut()
+{
+    if (gGameMovieFaded) {
+        paletteFadeTo(_cmap);
+        gGameMovieFaded = false;
+    }
+}
+
+// 0x44EB04 gmovie_has_been_played
+bool gameMovieIsSeen(int movie)
+{
+    return gGameMoviesSeen[movie] == 1;
+}
+
+// 0x44EB14 gmovieIsPlaying
+bool gameMovieIsPlaying()
+{
+    return gGameMovieIsPlaying;
+}
+
+// 0x44EB1C gmovie_subtitle_func
+static char* gameMovieBuildSubtitlesFilePath(char* movieFilePath)
+{
+    char* path = movieFilePath;
+
+    char* separator = strrchr(path, '\\');
+    if (separator != nullptr) {
+        path = separator + 1;
+    }
+
+    snprintf(gGameMovieSubtitlesFilePath, sizeof(gGameMovieSubtitlesFilePath), "text\\%s\\cuts\\%s", settings.system.language.c_str(), path);
+
+    char* pch = strrchr(gGameMovieSubtitlesFilePath, '.');
+    if (*pch != '\0') {
+        *pch = '\0';
+    }
+
+    strcpy(gGameMovieSubtitlesFilePath + strlen(gGameMovieSubtitlesFilePath), ".SVE");
+
+    return gGameMovieSubtitlesFilePath;
+}
+
+} // namespace fallout

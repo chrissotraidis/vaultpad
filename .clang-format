@@ -1,0 +1,3 @@
+BasedOnStyle: WebKit
+AllowShortIfStatementsOnASingleLine: WithoutElse
+FixNamespaceComments: true
