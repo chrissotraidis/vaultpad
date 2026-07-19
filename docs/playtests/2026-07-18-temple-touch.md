@@ -14,14 +14,14 @@
 
 | Interaction | Result | Evidence |
 | --- | --- | --- |
-| Expanded quick toolbar | Pass | `CUR`, `ACT`, `TRN`, `CMB`, and `SET` fit beside all eight skill buttons without overlapping the HUD. |
-| Cursor-mode control | Pass | `CUR` cycled action, attack, and movement modes without a hidden multi-finger gesture. |
+| Expanded quick toolbar | Pass | The initial Cursor, Item Action, End Turn, End Combat, and Settings controls fit beside all eight skill buttons without overlapping the HUD. They were later consolidated into the current full-label toolbar. |
+| Cursor-mode control | Pass | **Cursor** cycled action, attack, and movement modes without a hidden multi-finger gesture. |
 | Direct combat movement | Pass | Touch moved the character up the exterior stairs, crossed into the Temple, and navigated the foyer one AP-limited path at a time. |
-| End turn | Pass | `TRN` ended the player turn and allowed the giant ants to act. |
-| End combat | Pass | `CMB` correctly refused while another hostile remained and removed the legacy combat controls once the encounter ended. |
+| End turn | Pass | **End Turn** ended the player turn and allowed the giant ants to act. |
+| End combat | Pass | **End Combat** correctly refused while another hostile remained and removed the legacy combat controls once the encounter ended. |
 | Normal melee | Pass | Touch selected adjacent ants, showed hit chance, spent AP, produced hit/miss feedback, and killed both foyer ants. |
-| Aimed melee | Pass | `ACT` exposed the aimed attack; touch opened the body-part picker, selected the abdomen, and resolved the attack. |
-| Skill shortcut | Pass | `LCK` changed to the lockpick targeting cursor without moving the player. |
+| Aimed melee | Pass | **Item Action** exposed the aimed attack; touch opened the body-part picker, selected the abdomen, and resolved the attack. |
+| Skill shortcut | Pass | Lockpick, now selected through **Skills**, changed to the lockpick targeting cursor without moving the player. |
 | Inventory open | Pass | The legacy `INV` HUD control opened the inventory by direct touch during and outside combat. |
 | Tap equip/unequip | Pass | Tap an item, then tap a hand slot moved it; the reverse sequence returned it to the inventory list. No drag was required. |
 | Inventory close target | Pass after fix | The visible `DONE` text was inert in the first pass; an iPad-only 112×44 transparent target now closes the inventory from the label. |
@@ -29,8 +29,8 @@
 
 ## Iterations made from the session
 
-1. Added touch-safe `CUR` and `ACT` controls so movement, interaction, aimed attacks, and reload/action cycling are discoverable.
-2. Added `TRN` and `CMB` buttons required by the PRD's touch backlog.
+1. Added touch-safe Cursor and Item Action controls so movement, interaction, aimed attacks, and reload/action cycling are discoverable.
+2. Added End Turn and End Combat controls required by the PRD's touch backlog.
 3. Added the two-finger cursor gesture to first-run help.
 4. Enlarged the inventory `DONE` target to the complete visible control.
 

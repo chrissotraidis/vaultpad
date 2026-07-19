@@ -22,7 +22,7 @@ This checkpoint validates the unsigned device build and packaging path. It does 
 
 - File: `VaultPad-0.1.0-unsigned.ipa`
 - Size: 3.4 MB
-- SHA-256: `65a0e99d73682338bd41be9f24595507a991427d545a425c7f30dbae4f8e43ee`
+- SHA-256: `99af983dd828a05d0163f2ca6e9c815749155f1ea977793435facd81d4a18746`
 - Checksum verification: pass
 - Layout: `Payload/VaultPad.app` only; no `__MACOSX` or AppleDouble entries
 - Included notices: `LICENSE.md` and `THIRD_PARTY_NOTICES.md`
@@ -42,5 +42,5 @@ The release packager repeats the archive-entry scan and rejects game data, saves
 ## Remaining release boundary
 
 - The final clean-install Simulator matrix passed; see [2026-07-18-clean-install.md](2026-07-18-clean-install.md).
-- Publish the local engine branch through an authorized fork and pin it in this repository so CI builds the tested implementation.
+- The tested engine snapshot is published in this repository on `engine-vaultpad` at `c83584d8f333cbd12aff9ddf94177ed3b970d689`. A clean recursive clone resolves that exact submodule pin and passes `scripts/verify-repository.sh`.
 - Test signing and runtime on a physical iPad before presenting this as a device-validated release.
