@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  unsigned-ipa:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build and package
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: ./scripts/package-release.sh "${VERSION#v}" Release
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.ref_name }}
+        run: >-
+          gh release create "$VERSION"
+          "out/release/VaultPad-${VERSION#v}-unsigned.ipa"
+          "out/release/VaultPad-${VERSION#v}-unsigned.ipa.sha256"
+          --generate-notes
+          --title "VaultPad $VERSION"

@@ -1,5 +1,7 @@
 # Temple touch playtest — 2026-07-18
 
+> The abbreviated toolbar recorded in this early pass was replaced by the full-label clarity pass in [`../audits/2026-07-18-toolbar/README.md`](../audits/2026-07-18-toolbar/README.md). The combat and skill actions were re-tested there.
+
 ## Setup
 
 - iPad Pro 11-inch (M4) Simulator, iOS 18.5

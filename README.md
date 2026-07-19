@@ -16,7 +16,7 @@ VaultPad contains no Fallout game content. First launch asks for the folder from
 - Original VaultPad name, icon, onboarding, settings, and legal notices.
 - Reproducible Simulator and unsigned arm64 device builds.
 
-The playtest record is in [`docs/playtests/`](docs/playtests/) and the acceptance loop is in [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md). See [`docs/CONTROLS.md`](docs/CONTROLS.md) for the touch map, [`docs/MODS.md`](docs/MODS.md) for the supported mod boundary, and [`docs/FAQ.md`](docs/FAQ.md) for recovery and distribution answers.
+The playtest record is in [`docs/playtests/`](docs/playtests/), including the [quick-toolbar clarity audit](docs/audits/2026-07-18-toolbar/README.md), and the acceptance loop is in [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md). See [`docs/CONTROLS.md`](docs/CONTROLS.md) for the touch map, [`docs/MODS.md`](docs/MODS.md) for the supported mod boundary, and [`docs/FAQ.md`](docs/FAQ.md) for recovery and distribution answers.
 
 ## Build and run
 
@@ -41,7 +41,7 @@ Artifacts are written under `out/`, which is ignored by Git. See [`docs/INSTALL.
 
 | Path | Purpose |
 |---|---|
-| `engine/` | Pinned Fallout 2 Community Edition submodule and focused iPad changes |
+| `engine/` | Pinned engine snapshot from this repository's `engine-vaultpad` branch |
 | `ios/Launcher/` | Native onboarding, importer, settings, saves, and lifecycle shell |
 | `ios/Assets.xcassets/` | Original VaultPad app artwork |
 | `scripts/` | Setup, Simulator/device builds, packaging, and repository checks |

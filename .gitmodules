@@ -1,3 +1,4 @@
 [submodule "engine"]
 	path = engine
-	url = https://github.com/fallout2-ce/fallout2-ce.git
+	url = https://github.com/chrissotraidis/vaultpad.git
+	branch = engine-vaultpad

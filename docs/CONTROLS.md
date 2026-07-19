@@ -24,16 +24,16 @@ Cursor speed affects relative Trackpad movement. Display and control changes app
 
 ## Quick toolbar
 
-The toolbar sits above the game HUD:
+The toolbar sits above the game HUD and uses full labels:
 
-- `SNK`, `LCK`, `STL`, `TRP`, `F/A`, `DOC`, `SCI`, `RPR`: use the named skill.
-- `CUR`: cycle the world cursor between movement, interaction, and combat modes.
-- `ACT`: cycle the equipped-item action, including aimed attack and reload where available.
-- `TRN`: end the current combat turn.
-- `CMB`: request an end to combat; hostile actors can prevent it.
-- `SET`: open native VaultPad Settings.
+- **Skills**: open the named skill list. Choosing a targeted skill explains what to tap next.
+- **Cursor**: cycle the world cursor between Move, Interact, and Attack. The message display confirms the new mode.
+- **Item Action**: cycle the equipped-item action, including aimed attack and reload where available. The message display names the selected action.
+- **End Turn**: end the current combat turn. It appears dim outside combat and explains why it is unavailable if tapped.
+- **End Combat**: request an end to combat; hostile actors can prevent it. It appears dim outside combat.
+- **Settings**: open native VaultPad Settings.
 
-Turning the quick toolbar off hides the action buttons but keeps one compact `SET` tab, so the preference can always be reversed.
+Turning the quick toolbar off hides the action buttons but keeps one compact **Settings** tab, so the preference can always be reversed.
 
 ## Touch-native legacy screens
 

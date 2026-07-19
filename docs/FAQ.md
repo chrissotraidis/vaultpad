@@ -14,11 +14,11 @@ Inside VaultPad's Documents container under `data/SAVEGAME/`. App updates preser
 
 ## How do I protect saves before deleting the app?
 
-Open `SET` → **Export Saves…** → **Save to Files**. VaultPad creates a standard ZIP. After reinstalling and importing the game data, expand the ZIP in Files, start a game, open `SET` → **Import Save Folder…**, and select the expanded folder. The full clean-reinstall recovery chain is recorded in [`docs/playtests/2026-07-18-save-recovery.md`](playtests/2026-07-18-save-recovery.md).
+Open **Settings** → **Export Saves…** → **Save to Files**. VaultPad creates a standard ZIP. After reinstalling and importing the game data, expand the ZIP in Files, start a game, open **Settings** → **Import Save Folder…**, and select the expanded folder. The full clean-reinstall recovery chain is recorded in [`docs/playtests/2026-07-18-save-recovery.md`](playtests/2026-07-18-save-recovery.md).
 
 ## I hid the quick toolbar. How do I get it back?
 
-Tap the compact `SET` tab above the HUD, choose **Toolbar on**, save, and restart VaultPad.
+Tap the compact **Settings** tab above the HUD, choose **Toolbar on**, save, and restart VaultPad.
 
 ## Why is the IPA unsigned?
 

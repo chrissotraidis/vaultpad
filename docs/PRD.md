@@ -158,6 +158,8 @@ What exists today, split by repo. "Upstream" = `alexbatalov/fallout2-ce` @ `e970
 
 **Decision: maintain a long-lived downstream fork of `fallout2-ce/fallout2-ce` (the active org), consumed as a git submodule by a separate product repo, with every engine-side change submitted upstream.**
 
+**Implementation note (2026-07-18):** VaultPad is the downstream product repository. To keep the project in one GitHub repository, the pinned engine snapshot is published on its `engine-vaultpad` branch and consumed by `main` as the `engine/` submodule. This preserves reproducible pins without creating a second public fork.
+
 Rationale, in order of weight:
 
 1. Upstream `alexbatalov/fallout2-ce` is dormant (last commit 2025-02-16; open PRs from 2022 unreviewed). Basing there means owning every future engine fix alone.

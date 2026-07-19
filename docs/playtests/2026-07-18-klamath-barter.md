@@ -14,7 +14,7 @@
 | Interaction | Result | Evidence |
 | --- | --- | --- |
 | Classic save compatibility | Pass | The engine loaded the external Klamath checkpoint and entered Klamath Downtown without conversion or repair. |
-| Direct world touch | Pass | Touch moved the player to Aldo; `CUR` selected the interaction cursor and a touch on Aldo opened dialogue. |
+| Direct world touch | Pass | Touch moved the player to Aldo; **Cursor** selected the interaction cursor and a touch on Aldo opened dialogue. |
 | Dialogue choices | Pass | Touch selected a full response row and advanced the conversation. |
 | `BARTER` label target | Pass after fix | The visible word originally did nothing while the tiny red lamp worked. The full label now opens barter. |
 | Tap-to-offer | Pass after fix | A single item touch moves it from either inventory into the matching offer table; no drag gesture is required. |

@@ -10,13 +10,13 @@
 
 | Check | Result | Evidence |
 |---|---|---|
-| Product settings entry exists in gameplay | Pass | Quick toolbar displayed `SET` beside the eight skill shortcuts. |
-| Direct touch cannot fall through toolbar | Pass after fix | First pass moved the player under `SET`; toolbar routing was made mode-independent, and the second pass opened native settings without changing player position. |
+| Product settings entry exists in gameplay | Pass | Quick toolbar displayed a full **Settings** label beside the gameplay controls. |
+| Direct touch cannot fall through toolbar | Pass after fix | First pass moved the player under Settings; toolbar routing was made mode-independent, and the second pass opened native settings without changing player position. |
 | Native settings fit iPad landscape | Pass | Controls, Display, and Saves cards plus legal copy and actions fit without scrolling or truncation. |
 | Control mode persists | Pass | Selected Hybrid; config changed from `touch_mode=touch` to `touch_mode=hybrid`. |
 | Display preset persists | Pass | Selected Native; config wrote `resolution_x=1210`, `resolution_y=834`, and `[vaultpad] display_preset=native`. |
 | Toolbar preference persists | Pass | Selected **Toolbar off**; config changed from `quick_toolbar_visible=1` to `0`. |
-| Hidden toolbar remains reversible | Pass | After terminate/relaunch and loading Klamath, the action strip was replaced by one compact `SET` tab. Tapping it reopened Settings with **Toolbar off** selected. |
+| Hidden toolbar remains reversible | Pass | After terminate/relaunch and loading Klamath, the action strip was replaced by one compact **Settings** tab. Tapping it reopened Settings with **Toolbar off** selected. |
 | Reset defaults is complete | Pass | From Trackpad + Native + Toolbar off, **Reset Defaults** restored Hybrid, 1.0× sensitivity, Comfort, and Toolbar on in both the UI and config. |
 | Save export is shareable | Pass | iPad share sheet presented `VaultPad-Saves-2026-07-18-1156.zip` with Save to Files. |
 | Export ZIP is valid | Pass | macOS `unzip -t` reported no errors across both slots, nested proto files, and `slotdat.ini`. |

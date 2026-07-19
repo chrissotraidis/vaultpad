@@ -13,7 +13,8 @@ if [[ -n "$tracked_private" ]]; then
     exit 1
 fi
 
-test "$(git config -f .gitmodules --get submodule.engine.url)" = "https://github.com/fallout2-ce/fallout2-ce.git"
+test "$(git config -f .gitmodules --get submodule.engine.url)" = "https://github.com/chrissotraidis/vaultpad.git"
+test "$(git config -f .gitmodules --get submodule.engine.branch)" = "engine-vaultpad"
 test -f LICENSE.md
 test -f THIRD_PARTY_NOTICES.md
 test -s ios/Assets.xcassets/AppIcon.appiconset/AppIcon.png

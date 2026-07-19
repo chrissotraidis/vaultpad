@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ipad-builds:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Verify repository
+        run: ./scripts/verify-repository.sh
+
+      - name: Build iPad Simulator
+        run: ./scripts/build-simulator.sh Release
+
+      - name: Package unsigned iPad release
+        run: ./scripts/package-release.sh 0.1.0 Release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VaultPad-unsigned
+          path: |
+            out/release/VaultPad-0.1.0-unsigned.ipa
+            out/release/VaultPad-0.1.0-unsigned.ipa.sha256
+          if-no-files-found: error
