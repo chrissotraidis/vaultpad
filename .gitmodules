@@ -1,0 +1,4 @@
+[submodule "engine"]
+	path = engine
+	url = https://github.com/chrissotraidis/vaultpad.git
+	branch = engine-vaultpad

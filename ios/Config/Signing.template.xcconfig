@@ -1,0 +1,4 @@
+// Copy to Signing.xcconfig and fill in your Apple development team.
+// This local file is ignored by Git.
+DEVELOPMENT_TEAM = YOURTEAMID
+CODE_SIGN_STYLE = Automatic

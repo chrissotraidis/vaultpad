@@ -1,0 +1,10 @@
+.DS_Store
+
+# User-supplied, copyrighted game data. Never commit or distribute it.
+/ref/
+
+# Generated build products and local signing configuration.
+/out/
+/build/
+/ios/Config/Signing.xcconfig
+
