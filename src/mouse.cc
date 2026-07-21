@@ -6,6 +6,7 @@
 
 #include "color.h"
 #include "dinput.h"
+#include "display_monitor.h"
 #include "input.h"
 #include "interface.h"
 #include "kb.h"
@@ -129,6 +130,17 @@ static char _mouse_trans;
 
 static int gMouseWheelX = 0;
 static int gMouseWheelY = 0;
+
+// Direct-touch taps are deliberately spread across several engine ticks so
+// Fallout's original hover-first buttons receive a normal mouse sequence.
+// Keep this state at file scope so modal transitions can cancel the sequence.
+static bool gPendingTouchHover = false;
+static int gPendingTouchButtonPress = 0;
+static bool gPendingTouchButtonRelease = false;
+static int gTouchPanAccumulatorX = 0;
+static int gTouchPanAccumulatorY = 0;
+static int gTouchPreviousX = 0;
+static int gTouchPreviousY = 0;
 
 // 0x4C9F40
 int mouseInit()
@@ -425,10 +437,6 @@ static bool handleHudTapThrough(const Gesture& gesture)
 // 0x4CA59C
 void _mouse_info()
 {
-    static bool pendingTouchHover = false;
-    static int pendingTouchButtonPress = 0;
-    static bool pendingTouchButtonRelease = false;
-
     if (!gMouseInitialized) {
         return;
     }
@@ -446,30 +454,27 @@ void _mouse_info()
     // one releasing to satisfy the original button manager's hover-first
     // contract. Updating hover separately matters for dialogs whose buttons
     // ignore a press that arrives on the same tick as their first mouse-over.
-    if (pendingTouchButtonRelease) {
+    if (gPendingTouchButtonRelease) {
         _mouse_simulate_input(0, 0, 0);
-        pendingTouchButtonRelease = false;
+        gPendingTouchButtonRelease = false;
         return;
     }
 
-    if (pendingTouchHover) {
+    if (gPendingTouchHover) {
         _mouse_simulate_input(0, 0, 0);
-        pendingTouchHover = false;
+        gPendingTouchHover = false;
         return;
     }
 
-    if (pendingTouchButtonPress != 0) {
-        _mouse_simulate_input(0, 0, pendingTouchButtonPress);
-        pendingTouchButtonPress = 0;
-        pendingTouchButtonRelease = true;
+    if (gPendingTouchButtonPress != 0) {
+        _mouse_simulate_input(0, 0, gPendingTouchButtonPress);
+        gPendingTouchButtonPress = 0;
+        gPendingTouchButtonRelease = true;
         return;
     }
 
     Gesture gesture;
     if (touch_get_gesture(&gesture)) {
-        static int prevx;
-        static int prevy;
-
         // Multi-finger gestures for keyboard-less touch play:
         //   3-finger swipe down → ESC (options menu)
         //   3-finger long press → hold Left Shift (highlights interactables)
@@ -539,6 +544,11 @@ void _mouse_info()
             if (handleHudTapThrough(gesture)) {
                 goto tap_done;
             }
+
+            if (settings.ui.quick_toolbar_visible && gesture.numberOfTouches == 2) {
+                displayMonitorAddMessage("Drag with two fingers to pan the map.");
+                goto tap_done;
+            }
 #endif
 
             if (gesture.numberOfTouches == 1) {
@@ -549,13 +559,13 @@ void _mouse_info()
 
             if (touch_get_touchscreen_mode()) {
                 _mouse_set_position(gesture.x, gesture.y);
-                pendingTouchHover = button != 0;
-                pendingTouchButtonPress = button;
+                gPendingTouchHover = button != 0;
+                gPendingTouchButtonPress = button;
             } else {
                 // Trackpad taps click at the existing cursor. Cursor movement
                 // belongs exclusively to one-finger pan gestures.
                 _mouse_simulate_input(0, 0, button);
-                pendingTouchButtonRelease = button != 0;
+                gPendingTouchButtonRelease = button != 0;
             }
         tap_done:
             break;
@@ -563,31 +573,55 @@ void _mouse_info()
         case kLongPress:
         case kPan:
             if (gesture.state == kBegan) {
-                prevx = gesture.x;
-                prevy = gesture.y;
+                gTouchPreviousX = gesture.x;
+                gTouchPreviousY = gesture.y;
+                gTouchPanAccumulatorX = 0;
+                gTouchPanAccumulatorY = 0;
             }
             if (!mouseDeviceUsesRelativeMode()) {
-                prevx = 0;
-                prevy = 0;
+                gTouchPreviousX = 0;
+                gTouchPreviousY = 0;
             }
 
             if (gesture.type == kLongPress) {
                 if (gesture.numberOfTouches == 1) {
-                    _mouse_simulate_input(gesture.x - prevx, gesture.y - prevy, MOUSE_STATE_LEFT_BUTTON_DOWN);
+                    _mouse_simulate_input(gesture.x - gTouchPreviousX, gesture.y - gTouchPreviousY, MOUSE_STATE_LEFT_BUTTON_DOWN);
                 } else if (gesture.numberOfTouches == 2) {
-                    _mouse_simulate_input(gesture.x - prevx, gesture.y - prevy, MOUSE_STATE_RIGHT_BUTTON_DOWN);
+                    _mouse_simulate_input(gesture.x - gTouchPreviousX, gesture.y - gTouchPreviousY, MOUSE_STATE_RIGHT_BUTTON_DOWN);
                 }
             } else if (gesture.type == kPan) {
                 if (!touch_get_pan_mode() && gesture.numberOfTouches == 1) {
                     if (!touch_get_touchscreen_mode()) {
-                        int deltaX = static_cast<int>((gesture.x - prevx) * settings.input.touch_sensitivity);
-                        int deltaY = static_cast<int>((gesture.y - prevy) * settings.input.touch_sensitivity);
+                        int deltaX = static_cast<int>((gesture.x - gTouchPreviousX) * settings.input.touch_sensitivity);
+                        int deltaY = static_cast<int>((gesture.y - gTouchPreviousY) * settings.input.touch_sensitivity);
                         _mouse_simulate_input(deltaX, deltaY, 0);
                     }
                 } else if (touch_get_pan_mode() || gesture.numberOfTouches == 2) {
-                    int coefficient = touch_get_pan_mode() ? 8 : 2;
-                    gMouseWheelX = (prevx - gesture.x) / coefficient;
-                    gMouseWheelY = (gesture.y - prevy) / coefficient;
+                    // Accumulate deliberate travel before emitting a single
+                    // wheel step. Dividing each event independently made slow
+                    // drags do nothing and fast drags fire a step on nearly
+                    // every frame, which felt both sticky and jumpy on iPad.
+                    int threshold = touch_get_pan_mode() ? 8 : 12;
+                    gTouchPanAccumulatorX += gTouchPreviousX - gesture.x;
+                    gTouchPanAccumulatorY += gesture.y - gTouchPreviousY;
+
+                    gMouseWheelX = 0;
+                    if (gTouchPanAccumulatorX >= threshold) {
+                        gMouseWheelX = 1;
+                        gTouchPanAccumulatorX -= threshold;
+                    } else if (gTouchPanAccumulatorX <= -threshold) {
+                        gMouseWheelX = -1;
+                        gTouchPanAccumulatorX += threshold;
+                    }
+
+                    gMouseWheelY = 0;
+                    if (gTouchPanAccumulatorY >= threshold) {
+                        gMouseWheelY = 1;
+                        gTouchPanAccumulatorY -= threshold;
+                    } else if (gTouchPanAccumulatorY <= -threshold) {
+                        gMouseWheelY = -1;
+                        gTouchPanAccumulatorY += threshold;
+                    }
 
                     if (gMouseWheelX != 0 || gMouseWheelY != 0) {
                         gMouseEvent |= MOUSE_EVENT_WHEEL;
@@ -596,8 +630,8 @@ void _mouse_info()
                 }
             }
 
-            prevx = gesture.x;
-            prevy = gesture.y;
+            gTouchPreviousX = gesture.x;
+            gTouchPreviousY = gesture.y;
             break;
         case kUnrecognized:
             break;
@@ -819,6 +853,22 @@ static void _mouse_clip()
 int mouseGetEvent()
 {
     return gMouseEvent;
+}
+
+void mouseResetTouchInput()
+{
+    gPendingTouchHover = false;
+    gPendingTouchButtonPress = 0;
+    gPendingTouchButtonRelease = false;
+    gTouchPanAccumulatorX = 0;
+    gTouchPanAccumulatorY = 0;
+    gTouchPreviousX = 0;
+    gTouchPreviousY = 0;
+    gMouseWheelX = 0;
+    gMouseWheelY = 0;
+    last_buttons = 0;
+    _raw_buttons = 0;
+    gMouseEvent = 0;
 }
 
 // 0x4CAAA8

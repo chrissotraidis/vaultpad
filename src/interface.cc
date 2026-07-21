@@ -1089,24 +1089,33 @@ void interfaceRenderActionPoints(int actionPointsLeft, int bonusActionPoints)
 // 0x45EF6C intface_get_attack
 int interfaceGetCurrentHitMode(int* hitMode, bool* aiming)
 {
+    return interfaceGetHitModeForHand(gInterfaceCurrentHand, hitMode, aiming);
+}
+
+int interfaceGetHitModeForHand(int hand, int* hitMode, bool* aiming)
+{
     if (gInterfaceBarWindow == -1) {
+        return -1;
+    }
+
+    if (hand < 0 || hand >= HAND_COUNT) {
         return -1;
     }
 
     *aiming = false;
 
-    switch (gInterfaceItemStates[gInterfaceCurrentHand].action) {
+    switch (gInterfaceItemStates[hand].action) {
     case INTERFACE_ITEM_ACTION_PRIMARY_AIMING:
         *aiming = true;
         // FALLTHROUGH
     case INTERFACE_ITEM_ACTION_PRIMARY:
-        *hitMode = gInterfaceItemStates[gInterfaceCurrentHand].primaryHitMode;
+        *hitMode = gInterfaceItemStates[hand].primaryHitMode;
         return 0;
     case INTERFACE_ITEM_ACTION_SECONDARY_AIMING:
         *aiming = true;
         // FALLTHROUGH
     case INTERFACE_ITEM_ACTION_SECONDARY:
-        *hitMode = gInterfaceItemStates[gInterfaceCurrentHand].secondaryHitMode;
+        *hitMode = gInterfaceItemStates[hand].secondaryHitMode;
         return 0;
     }
 
@@ -1168,7 +1177,9 @@ int interfaceUpdateItems(bool animated, int leftItemAction, int rightItemAction)
 
             // SFALL: Keep selected attack mode.
             // CE: Implementation is different.
-            if (oldItem == nullptr) {
+            if (oldItem == nullptr
+                && oldAction >= INTERFACE_ITEM_ACTION_PRIMARY
+                && oldAction <= INTERFACE_ITEM_ACTION_SECONDARY_AIMING) {
                 leftItemState->action = oldAction;
             }
         }
@@ -1216,7 +1227,9 @@ int interfaceUpdateItems(bool animated, int leftItemAction, int rightItemAction)
 
             // SFALL: Keep selected attack mode.
             // CE: Implementation is different.
-            if (oldItem == nullptr) {
+            if (oldItem == nullptr
+                && oldAction >= INTERFACE_ITEM_ACTION_PRIMARY
+                && oldAction <= INTERFACE_ITEM_ACTION_SECONDARY_AIMING) {
                 rightItemState->action = oldAction;
             }
         }
@@ -1239,6 +1252,7 @@ int interfaceUpdateItems(bool animated, int leftItemAction, int rightItemAction)
     }
 
     interfaceBarRefreshMainAction();
+    quickToolbarRefresh();
 
     return 0;
 }
@@ -1264,6 +1278,7 @@ int interfaceBarSwapHands(bool animated)
         interfaceBarSwapHandsAnimatePutAwayTakeOutSequence((gDude->fid & 0xF000) >> 12, animationCode);
     } else {
         interfaceBarRefreshMainAction();
+        quickToolbarRefresh();
     }
 
     int mode = gameMouseGetMode();
@@ -1334,6 +1349,7 @@ int interfaceCycleItemAction()
 
     if (oldAction != itemState->action) {
         interfaceBarRefreshMainAction();
+        quickToolbarRefresh();
     }
 
     return 0;
@@ -1883,6 +1899,7 @@ static void interfaceDrawActionButtonOverlay(unsigned char* data, int width, int
 static int _intface_redraw_items_callback(Object* _, Object* __)
 {
     interfaceBarRefreshMainAction();
+    quickToolbarRefresh();
     return 0;
 }
 

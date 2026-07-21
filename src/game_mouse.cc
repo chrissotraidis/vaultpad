@@ -28,6 +28,7 @@
 #include "mouse.h"
 #include "object.h"
 #include "party_member.h"
+#include "platform/ios/quick_toolbar.h"
 #include "proto.h"
 #include "proto_instance.h"
 #include "settings.h"
@@ -1469,6 +1470,7 @@ void gameMouseSetMode(int mode)
 #else
     touch_set_touchscreen_mode(mode == GAME_MOUSE_MODE_MOVE);
 #endif
+    quickToolbarRefresh();
 }
 
 // 0x44CB6C

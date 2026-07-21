@@ -100,6 +100,14 @@ void touch_handle_start(SDL_TouchFingerEvent* event)
     }
 
     if (index != -1) {
+        bool hadActiveTouch = false;
+        for (int touchIndex = 0; touchIndex < MAX_TOUCHES; touchIndex++) {
+            if (touches[touchIndex].used && touches[touchIndex].phase != TOUCH_PHASE_ENDED) {
+                hadActiveTouch = true;
+                break;
+            }
+        }
+
         Touch* touch = &(touches[index]);
         touch->used = true;
         touch->fingerId = event->fingerId;
@@ -109,6 +117,17 @@ void touch_handle_start(SDL_TouchFingerEvent* event)
         touch->currentTimestamp = touch->startTimestamp;
         touch->currentLocation = touch->startLocation;
         touch->phase = TOUCH_PHASE_BEGAN;
+
+        // Direct touch should recover on finger-down, not after a drag or a
+        // later gesture-processing tick. This is especially important after
+        // returning from native settings or an engine modal. Only the first
+        // finger moves the cursor so a second finger can begin map panning
+        // without pulling the pointer to the gesture centroid.
+        if (gUseTouchscreenMode && !hadActiveTouch) {
+            mouseHideCursor();
+            _mouse_set_position(touch->currentLocation.x, touch->currentLocation.y);
+            mouseShowCursor();
+        }
     }
 }
 
@@ -277,7 +296,7 @@ void touch_process_gesture()
                 gestureEventsQueue.push_back(currentGesture);
             }
 
-            if (gUseTouchscreenMode) {
+            if (gUseTouchscreenMode && activeCount == 1) {
                 mouseHideCursor();
                 _mouse_set_position(currentCentroid.x, currentCentroid.y);
                 mouseShowCursor();
@@ -296,6 +315,25 @@ bool touch_get_gesture(Gesture* gesture)
     gestureEventsQueue.pop_front();
 
     return true;
+}
+
+void touch_reset()
+{
+    for (int index = 0; index < MAX_TOUCHES; index++) {
+        touches[index] = {};
+    }
+    currentGesture = {};
+    gestureEventsQueue.clear();
+}
+
+void touch_reset_to_direct_context()
+{
+    touch_reset();
+    mouseResetTouchInput();
+    gUsePanMode = false;
+    // Trackpad mode still wins inside touch_set_touchscreen_mode. Hybrid and
+    // Direct both return to finger-aligned input after a modal closes.
+    touch_set_touchscreen_mode(true);
 }
 
 void touch_set_touchscreen_mode(const bool value)

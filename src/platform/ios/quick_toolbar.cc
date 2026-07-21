@@ -2,8 +2,10 @@
 
 #if defined(__APPLE__) && TARGET_OS_IOS
 
+#include <stdio.h>
 #include <string.h>
 
+#include "../../animation.h"
 #include "../../art.h"
 #include "../../color.h"
 #include "../../combat.h"
@@ -13,10 +15,14 @@
 #include "../../game_mouse.h"
 #include "../../input.h"
 #include "../../interface.h"
+#include "../../item.h"
 #include "../../kb.h"
-#include "../../skilldex.h"
+#include "../../mouse.h"
+#include "../../object.h"
+#include "../../settings.h"
 #include "../../svga.h"
 #include "../../text_font.h"
+#include "../../touch.h"
 #include "../../window_manager.h"
 
 namespace fallout {
@@ -28,11 +34,12 @@ extern "C" void falloutPresentIOSProductSettings();
 namespace {
 
     enum class ToolbarAction {
-        Skills,
-        Cursor,
+        MoveMode,
+        UseMode,
+        AttackMode,
         ItemAction,
+        AlternateAction,
         EndTurn,
-        EndCombat,
         Settings,
     };
 
@@ -43,65 +50,91 @@ namespace {
         bool startsGroup;
     };
 
-    // The old toolbar exposed thirteen equal-width abbreviations. Full labels
-    // and progressive disclosure through the game's existing Skilldex keep the
-    // same compact footprint while making every action understandable.
+    // Fallout already exposes Skills and combat turn controls in its HUD. The
+    // touch bar only supplies commands that otherwise require a mouse button or
+    // hidden gesture, with explicit mode choices instead of a cycling cursor.
     constexpr ToolbarEntry kButtons[] = {
-        { ToolbarAction::Skills, "Skills", 60, false },
-        { ToolbarAction::Cursor, "Cursor", 64, true },
-        { ToolbarAction::ItemAction, "Item Action", 82, false },
-        { ToolbarAction::EndTurn, "End Turn", 72, true },
-        { ToolbarAction::EndCombat, "End Combat", 88, false },
+        { ToolbarAction::MoveMode, "Move", 38, false },
+        { ToolbarAction::UseMode, "Use", 34, false },
+        { ToolbarAction::AttackMode, "Attack", 44, false },
+        { ToolbarAction::ItemAction, nullptr, 104, true },
+        { ToolbarAction::AlternateAction, nullptr, 112, false },
+        { ToolbarAction::EndTurn, "End turn", 54, true },
 #ifdef FALLOUT_IOS_PRODUCT_BOOTSTRAP
-        { ToolbarAction::Settings, "Settings", 76, true },
+        { ToolbarAction::Settings, nullptr, 46, true },
 #endif
     };
 
     constexpr int kButtonCount = sizeof(kButtons) / sizeof(kButtons[0]);
-    constexpr int kButtonHeight = 38;
-    constexpr int kGroupGap = 6;
-    constexpr int kToolbarBottomMargin = 10;
-    // Window is exactly the button row — no outer padding rows, so there are no
-    // pixels outside the buttons that could bleed as window background.
-    constexpr int kToolbarHeight = kButtonHeight;
+    constexpr int kButtonHeight = 24;
+    constexpr int kCollapsedButtonHeight = 22;
+    constexpr int kButtonGap = 1;
+    constexpr int kGroupGap = 4;
+    constexpr int kPanelPadding = 2;
+    constexpr int kToolbarBottomMargin = 2;
+    constexpr int kCollapsedRightMargin = 10;
 
     int gToolbarWindow = -1;
     int gToolbarX = 0;
     int gToolbarY = 0;
+    int gToolbarWidth = 0;
     bool gShown = false;
     bool gEnabled = true;
 
-    int visibleButtonCount()
+    int currentButtonHeight()
+    {
+        return gEnabled ? kButtonHeight : kCollapsedButtonHeight;
+    }
+
+    int currentToolbarHeight()
+    {
+        return currentButtonHeight() + kPanelPadding * 2;
+    }
+
+    bool entryIsVisible(int entryIndex)
     {
 #ifdef FALLOUT_IOS_PRODUCT_BOOTSTRAP
-        // Keep Settings reachable when quick actions are hidden so the choice
-        // can always be reversed without editing the config by hand.
-        return gEnabled ? kButtonCount : 1;
-#else
-        return gEnabled ? kButtonCount : 0;
+        if (!gEnabled) {
+            return kButtons[entryIndex].action == ToolbarAction::Settings;
+        }
 #endif
+        ToolbarAction action = kButtons[entryIndex].action;
+        return (action != ToolbarAction::AttackMode && action != ToolbarAction::EndTurn) || isInCombat();
+    }
+
+    int visibleButtonCount()
+    {
+        int count = 0;
+        for (int entryIndex = 0; entryIndex < kButtonCount; entryIndex++) {
+            if (entryIsVisible(entryIndex)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     int visibleEntryIndex(int visibleIndex)
     {
-#ifdef FALLOUT_IOS_PRODUCT_BOOTSTRAP
-        if (!gEnabled) {
-            return kButtonCount - 1;
+        for (int entryIndex = 0; entryIndex < kButtonCount; entryIndex++) {
+            if (!entryIsVisible(entryIndex)) {
+                continue;
+            }
+            if (visibleIndex == 0) {
+                return entryIndex;
+            }
+            visibleIndex--;
         }
-#endif
-        return visibleIndex;
+        return -1;
     }
 
     int buttonX(int visibleIndex)
     {
-        int x = 0;
+        int x = kPanelPadding;
         for (int i = 0; i < visibleIndex; i++) {
             int entryIndex = visibleEntryIndex(i);
             x += kButtons[entryIndex].width;
             int nextEntryIndex = visibleEntryIndex(i + 1);
-            if (kButtons[nextEntryIndex].startsGroup) {
-                x += kGroupGap;
-            }
+            x += kButtons[nextEntryIndex].startsGroup ? kGroupGap : kButtonGap;
         }
         return x;
     }
@@ -115,7 +148,7 @@ namespace {
 
         int lastVisibleIndex = count - 1;
         int lastEntryIndex = visibleEntryIndex(lastVisibleIndex);
-        return buttonX(lastVisibleIndex) + kButtons[lastEntryIndex].width;
+        return buttonX(lastVisibleIndex) + kButtons[lastEntryIndex].width + kPanelPadding;
     }
 
     void fillRect(unsigned char* buffer, int pitch, int x, int y, int w, int h, unsigned char color)
@@ -144,21 +177,258 @@ namespace {
         fontDrawText(buffer + ty * pitch + tx, text, maxDrawWidth, pitch, color);
     }
 
-    // Muted panel tuned to sit inside the same tonal range as the belt: very dim
-    // fill, thin soft border, no sharp highlight/shadow. Label uses the dimmed
-    // yellow of the belt's HUD text so it doesn't compete with the interface.
-    void paintPanelButton(unsigned char* buffer, int pitch, int x, int y, int w, int h, const char* label, bool enabled)
+    struct CurrentAttack {
+        const char* name;
+        int actionPoints;
+        bool aiming;
+        bool valid;
+    };
+
+    const char* attackNameForHitMode(int hitMode)
     {
-        unsigned char panel = intensityColorTable[COLOR_WHITE][enabled ? 8 : 5];
-        unsigned char border = intensityColorTable[COLOR_WHITE][enabled ? 28 : 14];
+        switch (hitMode) {
+        case HIT_MODE_PUNCH:
+            return "Punch";
+        case HIT_MODE_KICK:
+            return "Kick";
+        case HIT_MODE_STRONG_PUNCH:
+            return "Strong Punch";
+        case HIT_MODE_HAMMER_PUNCH:
+            return "Hammer Punch";
+        case HIT_MODE_HAYMAKER:
+            return "Lightning Punch";
+        case HIT_MODE_JAB:
+            return "Chop Punch";
+        case HIT_MODE_PALM_STRIKE:
+            return "Dragon Punch";
+        case HIT_MODE_PIERCING_STRIKE:
+            return "Force Punch";
+        case HIT_MODE_STRONG_KICK:
+            return "Strong Kick";
+        case HIT_MODE_SNAP_KICK:
+            return "Snap Kick";
+        case HIT_MODE_POWER_KICK:
+            return "Roundhouse";
+        case HIT_MODE_HIP_KICK:
+            return "Hip Kick";
+        case HIT_MODE_HOOK_KICK:
+            return "Jump Kick";
+        case HIT_MODE_PIERCING_KICK:
+            return "Death Blossom";
+        default:
+            break;
+        }
+
+        if (gDude != nullptr) {
+            switch (critterGetAnimationForHitMode(gDude, hitMode)) {
+            case ANIM_THROW_ANIM:
+                return "Throw";
+            case ANIM_THRUST_ANIM:
+                return "Thrust";
+            case ANIM_SWING_ANIM:
+                return "Swing";
+            case ANIM_FIRE_SINGLE:
+                return "Single Shot";
+            case ANIM_FIRE_BURST:
+            case ANIM_FIRE_CONTINUOUS:
+                return "Burst";
+            default:
+                break;
+            }
+        }
+
+        return "Attack";
+    }
+
+    CurrentAttack attackForHand(int hand)
+    {
+        int hitMode = HIT_MODE_PUNCH;
+        bool aiming = false;
+        if (gDude == nullptr || interfaceGetHitModeForHand(hand, &hitMode, &aiming) == -1) {
+            return { "Attack", 0, false, false };
+        }
+
+        return {
+            attackNameForHitMode(hitMode),
+            itemGetActionPointCost(gDude, hitMode, aiming),
+            aiming,
+            true,
+        };
+    }
+
+    CurrentAttack currentAttack()
+    {
+        return attackForHand(interfaceGetCurrentHand());
+    }
+
+    void showAttackGuidance()
+    {
+        CurrentAttack attack = currentAttack();
+        if (!attack.valid) {
+            displayMonitorAddMessage("Choose an attack action first.");
+            return;
+        }
+
+        static char message[128];
+        int availableActionPoints = gDude != nullptr ? gDude->data.critter.combat.ap : 0;
+        if (isInCombat() && attack.actionPoints > availableActionPoints) {
+            snprintf(message, sizeof(message), "%s costs %d action points; you have %d. Choose End turn.", attack.name, attack.actionPoints, availableActionPoints);
+        } else if (attack.aiming) {
+            snprintf(message, sizeof(message), "Aimed %s costs %d action points. Pick a body part; it can still miss.", attack.name, attack.actionPoints);
+        } else {
+            snprintf(message, sizeof(message), "%s costs %d action points. The target percentage is your chance to hit.", attack.name, attack.actionPoints);
+        }
+        displayMonitorAddMessage(message);
+    }
+
+    const char* itemActionLabel()
+    {
+        // The game's main HUD action is the clearest source of truth. Checking
+        // the raw left/right item state first can report "Use Item" while the
+        // visible HUD and cursor are actually set to Punch.
+        CurrentAttack attack = currentAttack();
+        if (attack.valid) {
+            static char label[64];
+            snprintf(label, sizeof(label), "%s%s - Cost %d", attack.aiming ? "Aim " : "", attack.name, attack.actionPoints);
+            return label;
+        }
+
+        int leftAction;
+        int rightAction;
+        interfaceGetItemActions(&leftAction, &rightAction);
+        int action = interfaceGetCurrentHand() == 0 ? leftAction : rightAction;
+        switch (action) {
+        case INTERFACE_ITEM_ACTION_USE:
+            return "Use Item";
+        case INTERFACE_ITEM_ACTION_RELOAD:
+            return "Reload";
+        default:
+            break;
+        }
+
+        return "Action";
+    }
+
+    const char* alternateActionLabel()
+    {
+        int otherHand = interfaceGetCurrentHand() == 0 ? 1 : 0;
+        CurrentAttack attack = attackForHand(otherHand);
+        if (attack.valid) {
+            static char label[64];
+            snprintf(label, sizeof(label), "Next: %s", attack.name);
+            return label;
+        }
+
+        int leftAction;
+        int rightAction;
+        interfaceGetItemActions(&leftAction, &rightAction);
+        int action = otherHand == 0 ? leftAction : rightAction;
+        if (action == INTERFACE_ITEM_ACTION_USE) {
+            return "Other item";
+        }
+        if (action == INTERFACE_ITEM_ACTION_RELOAD) {
+            return "Other weapon";
+        }
+        return "Other action";
+    }
+
+    const char* entryLabel(const ToolbarEntry& entry)
+    {
+        if (entry.action == ToolbarAction::ItemAction) {
+            return itemActionLabel();
+        }
+        if (entry.action == ToolbarAction::AlternateAction) {
+            return alternateActionLabel();
+        }
+        return entry.label;
+    }
+
+    bool entryIsSelected(const ToolbarEntry& entry)
+    {
+        int mode = gameMouseGetMode();
+        switch (entry.action) {
+        case ToolbarAction::MoveMode:
+            return mode == GAME_MOUSE_MODE_MOVE;
+        case ToolbarAction::UseMode:
+            return mode == GAME_MOUSE_MODE_ARROW;
+        case ToolbarAction::AttackMode:
+            return mode == GAME_MOUSE_MODE_CROSSHAIR;
+        default:
+            return false;
+        }
+    }
+
+    void paintSettingsCog(unsigned char* buffer, int pitch, int centerX, int centerY, unsigned char metal, unsigned char hole)
+    {
+        // A 13x13 pixel cog: eight visible teeth, a compact body, and a dark
+        // center bore. Keeping it this geometric makes it survive iPad scaling.
+        fillRect(buffer, pitch, centerX - 4, centerY - 4, 9, 9, metal);
+        fillRect(buffer, pitch, centerX - 1, centerY - 6, 3, 2, metal);
+        fillRect(buffer, pitch, centerX - 1, centerY + 5, 3, 2, metal);
+        fillRect(buffer, pitch, centerX - 6, centerY - 1, 2, 3, metal);
+        fillRect(buffer, pitch, centerX + 5, centerY - 1, 2, 3, metal);
+        fillRect(buffer, pitch, centerX - 5, centerY - 5, 2, 2, metal);
+        fillRect(buffer, pitch, centerX + 4, centerY - 5, 2, 2, metal);
+        fillRect(buffer, pitch, centerX - 5, centerY + 4, 2, 2, metal);
+        fillRect(buffer, pitch, centerX + 4, centerY + 4, 2, 2, metal);
+        fillRect(buffer, pitch, centerX - 2, centerY - 2, 5, 5, hole);
+    }
+
+    void paintVaultPadBadge(unsigned char* buffer, int pitch, int x, int y, int w, int h)
+    {
+        // A tiny riveted field-terminal badge, derived from the VaultPad visual
+        // language but rendered in Fallout's own palette and pixel font. It is
+        // deliberately an icon inside the button, not another text command.
+        int badgeX = x + 5;
+        int badgeY = y + 4;
+        int badgeWidth = w - 10;
+        int badgeHeight = h - 8;
+        unsigned char face = intensityColorTable[COLOR_DULL_BROWN][12];
+        unsigned char brass = intensityColorTable[COLOR_LIGHT_GOLD_2][52];
+        unsigned char shadow = intensityColorTable[COLOR_DARK_BROWN][70];
+        unsigned char letters = intensityColorTable[COLOR_LIGHT_GOLD_2][94];
+
+        fillRect(buffer, pitch, badgeX, badgeY, badgeWidth, badgeHeight, face);
+        fillRect(buffer, pitch, badgeX, badgeY, badgeWidth, 1, brass);
+        fillRect(buffer, pitch, badgeX, badgeY, 1, badgeHeight, brass);
+        fillRect(buffer, pitch, badgeX, badgeY + badgeHeight - 1, badgeWidth, 1, shadow);
+        fillRect(buffer, pitch, badgeX + badgeWidth - 1, badgeY, 1, badgeHeight, shadow);
+
+        // Clip the four corners so this remains a small field-terminal plate.
+        buffer[badgeY * pitch + badgeX] = face;
+        buffer[badgeY * pitch + badgeX + badgeWidth - 1] = face;
+        buffer[(badgeY + badgeHeight - 1) * pitch + badgeX] = face;
+        buffer[(badgeY + badgeHeight - 1) * pitch + badgeX + badgeWidth - 1] = face;
+
+        int centerY = badgeY + badgeHeight / 2;
+        paintSettingsCog(buffer, pitch, badgeX + 8, centerY, brass, face);
+        drawCenteredLabel(buffer, pitch, badgeX + 18, badgeY, badgeWidth - 18, badgeHeight, "VP", letters);
+    }
+
+    void paintPanelButton(unsigned char* buffer, int pitch, int x, int y, int w, int h, const ToolbarEntry& entry, bool selected)
+    {
+        unsigned char panel = selected
+            ? intensityColorTable[COLOR_DULL_BROWN][32]
+            : intensityColorTable[COLOR_DULL_BROWN][18];
+        unsigned char topBorder = selected
+            ? intensityColorTable[COLOR_LIGHT_GOLD_2][72]
+            : intensityColorTable[COLOR_OLIVE][38];
+        unsigned char bottomBorder = intensityColorTable[COLOR_DARK_BROWN][selected ? 64 : 44];
 
         fillRect(buffer, pitch, x, y, w, h, panel);
-        fillRect(buffer, pitch, x, y, w, 1, border);
-        fillRect(buffer, pitch, x, y + h - 1, w, 1, border);
-        fillRect(buffer, pitch, x, y, 1, h, border);
-        fillRect(buffer, pitch, x + w - 1, y, 1, h, border);
+        fillRect(buffer, pitch, x, y, w, 1, topBorder);
+        fillRect(buffer, pitch, x, y, 1, h, topBorder);
+        fillRect(buffer, pitch, x, y + h - 1, w, 1, bottomBorder);
+        if (selected && w > 4 && h > 4) {
+            fillRect(buffer, pitch, x + 2, y + 2, w - 4, 1, intensityColorTable[COLOR_LIGHT_GOLD_2][42]);
+        }
+        fillRect(buffer, pitch, x + w - 1, y, 1, h, bottomBorder);
 
-        drawCenteredLabel(buffer, pitch, x, y, w, h, label, intensityColorTable[COLOR_LIGHT_YELLOW][enabled ? 48 : 22]);
+        if (entry.action == ToolbarAction::Settings) {
+            paintVaultPadBadge(buffer, pitch, x, y, w, h);
+        } else {
+            drawCenteredLabel(buffer, pitch, x, y, w, h, entryLabel(entry), intensityColorTable[COLOR_LIGHT_GOLD_2][selected ? 92 : 58]);
+        }
     }
 
     void paintAll()
@@ -168,20 +438,26 @@ namespace {
             return;
         }
 
-        int width = toolbarWidth();
-        fillRect(buffer, width, 0, 0, width, kToolbarHeight, COLOR_BLACK);
+        int width = gToolbarWidth;
+        int toolbarHeight = currentToolbarHeight();
+        unsigned char frame = intensityColorTable[COLOR_DULL_BROWN][26];
+        unsigned char frameHighlight = intensityColorTable[COLOR_OLIVE][40];
+        unsigned char frameShadow = intensityColorTable[COLOR_DARK_BROWN][62];
+        fillRect(buffer, width, 0, 0, width, toolbarHeight, frame);
+        fillRect(buffer, width, 0, 0, width, 1, frameHighlight);
+        fillRect(buffer, width, 0, 0, 1, toolbarHeight, frameHighlight);
+        fillRect(buffer, width, 0, toolbarHeight - 1, width, 1, frameShadow);
+        fillRect(buffer, width, width - 1, 0, 1, toolbarHeight, frameShadow);
 
         int oldFont = fontGetCurrent();
         fontSetCurrent(101);
 
-        int buttonY = (kToolbarHeight - kButtonHeight) / 2;
+        int buttonHeight = currentButtonHeight();
+        int buttonY = (toolbarHeight - buttonHeight) / 2;
         for (int visibleIndex = 0; visibleIndex < visibleButtonCount(); visibleIndex++) {
             int entryIndex = visibleEntryIndex(visibleIndex);
             const ToolbarEntry& entry = kButtons[entryIndex];
-            bool enabled = entry.action != ToolbarAction::EndTurn
-                && entry.action != ToolbarAction::EndCombat;
-            enabled = enabled || interfaceBarEndButtonsAreEnabled();
-            paintPanelButton(buffer, width, buttonX(visibleIndex), buttonY, entry.width, kButtonHeight, entry.label, enabled);
+            paintPanelButton(buffer, width, buttonX(visibleIndex), buttonY, entry.width, buttonHeight, entry, entryIsSelected(entry));
         }
 
         fontSetCurrent(oldFont);
@@ -192,14 +468,16 @@ namespace {
     // themselves use a non-black dim gray so they still render as raised tiles.
     void createWindow()
     {
-        int width = toolbarWidth();
-        if (width == 0) {
+        gToolbarWidth = toolbarWidth();
+        if (gToolbarWidth == 0) {
             return;
         }
-        gToolbarX = (screenGetWidth() - width) / 2;
-        gToolbarY = screenGetHeight() - INTERFACE_BAR_HEIGHT - kToolbarHeight - kToolbarBottomMargin;
+        gToolbarX = gEnabled
+            ? (screenGetWidth() - gToolbarWidth) / 2
+            : screenGetWidth() - gToolbarWidth - kCollapsedRightMargin;
+        gToolbarY = screenGetHeight() - INTERFACE_BAR_HEIGHT - currentToolbarHeight() - kToolbarBottomMargin;
 
-        gToolbarWindow = windowCreate(gToolbarX, gToolbarY, width, kToolbarHeight, COLOR_BLACK, WINDOW_HIDDEN | WINDOW_TRANSPARENT);
+        gToolbarWindow = windowCreate(gToolbarX, gToolbarY, gToolbarWidth, currentToolbarHeight(), COLOR_BLACK, WINDOW_HIDDEN | WINDOW_TRANSPARENT);
         if (gToolbarWindow == -1) {
             return;
         }
@@ -214,6 +492,7 @@ namespace {
         }
         windowDestroy(gToolbarWindow);
         gToolbarWindow = -1;
+        gToolbarWidth = 0;
     }
 
 } // namespace
@@ -280,8 +559,18 @@ bool quickToolbarContainsPoint(int x, int y)
     if (gToolbarWindow == -1 || !gShown) {
         return false;
     }
-    return x >= gToolbarX && x < gToolbarX + toolbarWidth()
-        && y >= gToolbarY && y < gToolbarY + kToolbarHeight;
+
+    // Modal screens own every tap until they close. This prevents a Skilldex
+    // Cancel tap (or a tap outside another dialog) from activating a toolbar
+    // button behind it.
+    constexpr int allowedModes = GameMode::kCombat | GameMode::kPlayerTurn;
+    if ((GameMode::getCurrentGameMode() & ~allowedModes) != 0) {
+        return false;
+    }
+
+    return windowGetAtPoint(x, y) == gToolbarWindow
+        && x >= gToolbarX && x < gToolbarX + gToolbarWidth
+        && y >= gToolbarY && y < gToolbarY + currentToolbarHeight();
 }
 
 bool quickToolbarHandleTap(int x, int y)
@@ -316,27 +605,26 @@ bool quickToolbarHandleTap(int x, int y)
         falloutPresentIOSProductSettings();
 #endif
         break;
-    case ToolbarAction::Skills:
-        displayMonitorAddMessage("Choose a skill.");
-        enqueueInputEvent(KEY_LOWERCASE_S);
+    case ToolbarAction::MoveMode:
+        gameMouseSetMode(GAME_MOUSE_MODE_MOVE);
+        displayMonitorAddMessage("Movement selected. Tap the ground.");
         break;
-    case ToolbarAction::Cursor:
-        gameMouseCycleMode();
-        switch (gameMouseGetMode()) {
-        case GAME_MOUSE_MODE_MOVE:
-            displayMonitorAddMessage("Cursor mode: Move.");
-            break;
-        case GAME_MOUSE_MODE_ARROW:
-            displayMonitorAddMessage("Cursor mode: Interact.");
-            break;
-        case GAME_MOUSE_MODE_CROSSHAIR:
-            displayMonitorAddMessage("Cursor mode: Attack.");
-            break;
-        default:
-            displayMonitorAddMessage("Cursor mode changed.");
+    case ToolbarAction::UseMode:
+        gameMouseSetMode(GAME_MOUSE_MODE_ARROW);
+        displayMonitorAddMessage("Interaction selected. Tap a person, door, or object.");
+        break;
+    case ToolbarAction::AttackMode: {
+        CurrentAttack attack = currentAttack();
+        showAttackGuidance();
+        if (attack.valid
+            && isInCombat()
+            && gDude != nullptr
+            && attack.actionPoints > gDude->data.critter.combat.ap) {
             break;
         }
+        gameMouseSetMode(GAME_MOUSE_MODE_CROSSHAIR);
         break;
+    }
     case ToolbarAction::ItemAction: {
         interfaceCycleItemAction();
         int leftAction;
@@ -345,47 +633,37 @@ bool quickToolbarHandleTap(int x, int y)
         int action = interfaceGetCurrentHand() == 0 ? leftAction : rightAction;
         switch (action) {
         case INTERFACE_ITEM_ACTION_USE:
-            displayMonitorAddMessage("Item action: Use.");
-            break;
-        case INTERFACE_ITEM_ACTION_PRIMARY:
-            displayMonitorAddMessage("Item action: Primary attack.");
-            break;
-        case INTERFACE_ITEM_ACTION_PRIMARY_AIMING:
-            displayMonitorAddMessage("Item action: Aimed attack.");
-            break;
-        case INTERFACE_ITEM_ACTION_SECONDARY:
-            displayMonitorAddMessage("Item action: Secondary attack.");
-            break;
-        case INTERFACE_ITEM_ACTION_SECONDARY_AIMING:
-            displayMonitorAddMessage("Item action: Aimed secondary attack.");
+            displayMonitorAddMessage("Item set to use.");
             break;
         case INTERFACE_ITEM_ACTION_RELOAD:
-            displayMonitorAddMessage("Item action: Reload.");
+            displayMonitorAddMessage("Weapon set to reload.");
             break;
         default:
-            displayMonitorAddMessage("This item has no alternate action.");
+            showAttackGuidance();
             break;
         }
+        quickToolbarRefresh();
         break;
     }
-    case ToolbarAction::EndTurn:
-        if (interfaceBarEndButtonsAreEnabled()) {
-            displayMonitorAddMessage("Turn ended.");
-            enqueueInputEvent(KEY_SPACE);
-        } else if (isInCombat()) {
-            displayMonitorAddMessage("End Turn is available on your turn.");
-        } else {
-            displayMonitorAddMessage("End Turn is available during combat.");
+    case ToolbarAction::AlternateAction:
+        if (interfaceBarSwapHands(false) == 0) {
+            CurrentAttack attack = currentAttack();
+            static char message[128];
+            if (attack.valid) {
+                snprintf(message, sizeof(message), "%s selected; costs %d action points.", attack.name, attack.actionPoints);
+                displayMonitorAddMessage(message);
+            } else {
+                displayMonitorAddMessage("Alternate item selected.");
+            }
+            quickToolbarRefresh();
         }
         break;
-    case ToolbarAction::EndCombat:
+    case ToolbarAction::EndTurn:
         if (interfaceBarEndButtonsAreEnabled()) {
-            displayMonitorAddMessage("End Combat requested.");
-            enqueueInputEvent(KEY_RETURN);
-        } else if (isInCombat()) {
-            displayMonitorAddMessage("End Combat is available on your turn.");
+            displayMonitorAddMessage("Turn ended. Enemies act next; your action points refill afterward.");
+            enqueueInputEvent(KEY_SPACE);
         } else {
-            displayMonitorAddMessage("End Combat is available during combat.");
+            displayMonitorAddMessage("End Turn is available when it is your turn.");
         }
         break;
     }
@@ -398,9 +676,39 @@ void quickToolbarRefresh()
     if (gToolbarWindow == -1) {
         return;
     }
+    if (toolbarWidth() != gToolbarWidth) {
+        bool wasShown = gShown;
+        destroyWindow();
+        gShown = false;
+        if (wasShown) {
+            quickToolbarShow();
+        }
+        return;
+    }
     paintAll();
     windowRefresh(gToolbarWindow);
 }
+
+#ifdef FALLOUT_IOS_PRODUCT_BOOTSTRAP
+extern "C" void falloutApplyIOSTouchSettings(const char* touchMode, double sensitivity, int toolbarEnabled)
+{
+    if (touchMode != nullptr) {
+        settings.input.touch_mode = touchMode;
+    }
+    settings.input.touch_sensitivity = sensitivity;
+    settings.ui.quick_toolbar_visible = toolbarEnabled != 0;
+    quickToolbarSetEnabled(settings.ui.quick_toolbar_visible);
+
+    // Re-applying the current game cursor mode updates direct-vs-trackpad
+    // routing and refreshes the command bar's selected state immediately.
+    gameMouseSetMode(gameMouseGetMode());
+}
+
+extern "C" void falloutResetIOSTouchState()
+{
+    touch_reset_to_direct_context();
+}
+#endif
 
 } // namespace fallout
 

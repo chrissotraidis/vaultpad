@@ -50,6 +50,7 @@ void interfaceRenderHitPoints(bool animate);
 void interfaceRenderArmorClass(bool animate);
 void interfaceRenderActionPoints(int actionPointsLeft, int bonusActionPoints);
 int interfaceGetCurrentHitMode(int* hitMode, bool* aiming);
+int interfaceGetHitModeForHand(int hand, int* hitMode, bool* aiming);
 int interfaceUpdateItems(bool animated, int leftItemAction, int rightItemAction);
 int interfaceBarSwapHands(bool animated);
 int interfaceGetItemActions(int* leftItemAction, int* rightItemAction);

@@ -31,6 +31,7 @@
 #include "stat.h"
 #include "svga.h"
 #include "text_font.h"
+#include "touch.h"
 #include "trait.h"
 #include "window_manager.h"
 
@@ -236,6 +237,9 @@ int characterSelectorOpen()
                 rc = 2;
                 done = true;
             } else {
+#if __APPLE__ && TARGET_OS_IOS
+                touch_reset_to_direct_context();
+#endif
                 characterSelectorWindowRefresh();
             }
 
@@ -246,6 +250,9 @@ int characterSelectorOpen()
                 rc = 2;
                 done = true;
             } else {
+#if __APPLE__ && TARGET_OS_IOS
+                touch_reset_to_direct_context();
+#endif
                 characterSelectorWindowRefresh();
             }
 
@@ -295,7 +302,7 @@ int characterSelectorOpen()
     }
 
 #if __APPLE__ && TARGET_OS_IOS
-    touch_set_touchscreen_mode(false);
+    touch_reset_to_direct_context();
 #endif
     return rc;
 }

@@ -51,6 +51,11 @@ bool cursorIsHidden();
 void _mouse_get_raw_state(int* out_x, int* out_y, int* out_buttons);
 void mouseSetSensitivity(double value);
 
+// Clears queued synthetic touch presses, releases, and pan deltas. iOS modal
+// screens call this before returning control so a half-finished gesture cannot
+// leak into the next screen.
+void mouseResetTouchInput();
+
 void mouseGetPositionInWindow(int win, int* x, int* y);
 bool mouseHitTestInWindow(int win, int left, int top, int right, int bottom);
 void mouseGetWheel(int* x, int* y);

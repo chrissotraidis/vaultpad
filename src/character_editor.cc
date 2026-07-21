@@ -1199,7 +1199,7 @@ int characterEditorShow(bool isCreationMode)
 
     interfaceRenderHitPoints(false);
 
-    touch_set_touchscreen_mode(false);
+    touch_reset_to_direct_context();
 
     return rc;
 }
@@ -1828,6 +1828,15 @@ static int characterEditorWindowInit()
     if (btn != -1) {
         buttonSetCallbacks(btn, _gsound_red_butt_press, _gsound_red_butt_release);
     }
+
+#if __APPLE__ && TARGET_OS_IOS
+    // The original editor only makes each tiny red lamp clickable even though
+    // the adjacent word reads like the button. Preserve the art, but make the
+    // full visible labels forgiving touch targets.
+    buttonCreate(gCharacterEditorWindow, 338, 448, 106, 30, -1, -1, -1, 501, nullptr, nullptr, nullptr, BUTTON_FLAG_TRANSPARENT);
+    buttonCreate(gCharacterEditorWindow, 450, 448, 92, 30, -1, -1, -1, 500, nullptr, nullptr, nullptr, BUTTON_FLAG_TRANSPARENT);
+    buttonCreate(gCharacterEditorWindow, 548, 448, 90, 30, -1, -1, -1, 502, nullptr, nullptr, nullptr, BUTTON_FLAG_TRANSPARENT);
+#endif
 
     windowRefresh(gCharacterEditorWindow);
     indicatorBarHide();
