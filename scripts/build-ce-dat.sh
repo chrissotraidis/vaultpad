@@ -11,7 +11,7 @@ if [[ -f "$resource" ]]; then
 fi
 
 cmake --preset macos -S "$engine_dir"
-cmake --build --preset macos-release --target ce-dat-resource
+cmake --build "$engine_dir/out/build/macos" --config RelWithDebInfo --target ce-dat-resource
 
 test -s "$resource"
 echo "$resource"

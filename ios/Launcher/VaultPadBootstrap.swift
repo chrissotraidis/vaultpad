@@ -207,18 +207,14 @@ private enum VaultDataImporter {
         }
     }
 
-    static func writeDefaultConfiguration(to documents: URL, displaySize: CGSize) throws {
+    static func writeDefaultConfiguration(to documents: URL, displaySize _: CGSize) throws {
         let destination = documents.appendingPathComponent("fallout2.cfg")
         guard !FileManager.default.fileExists(atPath: destination.path) else { return }
 
-        let landscapeWidth = max(displaySize.width, displaySize.height)
-        let landscapeHeight = min(displaySize.width, displaySize.height)
-        let width = max(640, (Int(landscapeWidth / 1.5) / 2) * 2)
-        let height = max(480, (Int(landscapeHeight / 1.5) / 2) * 2)
         let config = """
         [screen]
-        resolution_x=\(width)
-        resolution_y=\(height)
+        resolution_x=640
+        resolution_y=480
         scale=1
         windowed=0
 
@@ -230,8 +226,25 @@ private enum VaultDataImporter {
         auto_quick_save=3
         quick_toolbar_visible=1
 
+        [vaultpad]
+        display_preset=classic
+
         """
         try config.write(to: destination, atomically: true, encoding: .utf8)
+    }
+
+    static func migrateLegacyComfortDisplay(in documents: URL) {
+        let config = documents.appendingPathComponent("fallout2.cfg")
+        guard VaultPadConfig.value(section: "vaultpad", key: "display_preset", at: config) == "comfort" else {
+            return
+        }
+
+        // The former Comfort preset used a wider internal canvas. Fallout's
+        // fixed 640-pixel HUD then sat in the middle with black side gutters.
+        // Migrate only that legacy value; an explicit More Map choice remains.
+        try? VaultPadConfig.set(section: "screen", key: "resolution_x", value: "640", at: config)
+        try? VaultPadConfig.set(section: "screen", key: "resolution_y", value: "480", at: config)
+        try? VaultPadConfig.set(section: "vaultpad", key: "display_preset", value: "classic", at: config)
     }
 
     static func writeTouchMode(_ mode: String, to documents: URL) throws {
@@ -347,7 +360,7 @@ private struct ControlsView: View {
     @State private var selectedMode = "hybrid"
 
     private let modes = [
-        TouchModeChoice(id: "hybrid", name: "Hybrid", summary: "Tap the world directly. Precise screens fall back to a trackpad.", icon: "hand.tap"),
+        TouchModeChoice(id: "hybrid", name: "Hybrid", summary: "Tap directly; drag two fingers to pan the map.", icon: "hand.tap"),
         TouchModeChoice(id: "touch", name: "Direct", summary: "Every tap lands where your finger is. Fastest once familiar.", icon: "scope"),
         TouchModeChoice(id: "trackpad", name: "Trackpad", summary: "Drag anywhere to move the cursor, then tap to click.", icon: "rectangle.and.hand.point.up.left"),
     ]
@@ -355,8 +368,8 @@ private struct ControlsView: View {
     private let gestures = [
         ("hand.tap", "Tap", "Select, move, or use"),
         ("hand.point.up.left", "Press and hold", "Open the action menu"),
-        ("hand.tap.fill", "Two-finger tap", "Change the world cursor"),
-        ("hand.draw", "Two-finger drag", "Scroll lists and panels"),
+        ("hand.draw", "Two-finger drag", "Pan until you lift both fingers"),
+        ("arrow.left.arrow.right", "Alternate action", "The button previews Kick, Punch, or the other equipped item"),
         ("arrow.down", "Three-finger swipe", "Back or Escape"),
         ("highlighter", "Three-finger hold", "Highlight nearby objects"),
         ("square.and.arrow.down", "Four-finger hold", "Quick save"),
@@ -544,6 +557,7 @@ public func falloutRunIOSProductBootstrap() {
     VaultPadAudioSession.shared.configure()
 
     let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    VaultDataImporter.migrateLegacyComfortDisplay(in: documents)
     guard !VaultDataImporter.isReady(in: documents) else { return }
 
     var finished = false

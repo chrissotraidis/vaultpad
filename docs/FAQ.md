@@ -6,7 +6,7 @@ No. VaultPad contains the engine source, native iPad product layer, and original
 
 ## Which iPads are supported?
 
-The app targets iPadOS 15 or newer and iPad only. The current deep test profile is an 11-inch iPad Pro Simulator on iPadOS 18.5. A real arm64 device build succeeds, but physical-device runtime, battery, thermals, hardware pointers, and interruption handling are not yet certified.
+The app targets iPadOS 15 or newer and iPad only. Simulator coverage includes 11-inch and 13-inch iPad Pro profiles, and the current physical test device is a 12.9-inch iPad Pro (6th generation). Battery, thermals, hardware pointers, and long-session interruption handling are not yet certified.
 
 ## Where are saves stored?
 
@@ -18,7 +18,7 @@ Open **Settings** → **Export Saves…** → **Save to Files**. VaultPad create
 
 ## I hid the quick toolbar. How do I get it back?
 
-Tap the compact **Settings** tab above the HUD, choose **Toolbar on**, save, and restart VaultPad.
+Tap the compact **Settings** control above the HUD, choose **Full Bar** under **Gameplay Command Bar**, then choose **Apply & Return**. Touch controls update immediately.
 
 ## Why is the IPA unsigned?
 

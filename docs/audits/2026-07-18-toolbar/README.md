@@ -1,5 +1,7 @@
 # iPad quick-toolbar usability audit
 
+> Historical checkpoint. Direct user testing on iPadOS 26 found that this six-button revision still duplicated Fallout controls and allowed modal tap-through. It was superseded by the [2026-07-19 command-bar and Settings iteration](../../playtests/2026-07-19-toolbar-settings-iteration.md).
+
 Date: 2026-07-18
 Surface: VaultPad gameplay on the 11-inch iPad Pro (M4), iOS 18.5 Simulator
 Goal: make every bottom action understandable and prove that it works without adding visual clutter.

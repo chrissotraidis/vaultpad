@@ -6,40 +6,46 @@ VaultPad starts in **Hybrid** mode. The first-run controls screen and in-game Se
 
 | Mode | Behavior |
 | --- | --- |
-| Hybrid | Direct taps in the world and touch-optimized screens; precision screens retain trackpad-style behavior where needed. Recommended. |
+| Hybrid | Direct taps plus momentary two-finger map panning. Trackpad behavior is used only when selected. Recommended. |
 | Direct | Every tap moves the game cursor to the finger before activating the target. |
 | Trackpad | Drag to move the game cursor, then tap to click at the cursor. |
 
-Cursor speed affects relative Trackpad movement. Display and control changes apply after restarting VaultPad.
+Cursor speed affects relative Trackpad movement. Touch controls apply with **Apply & Return**; display changes apply after restarting VaultPad.
 
 ## Gestures
 
 - Tap: select, move, interact, or activate the control under the finger.
 - Long-press and drag: hold and drag when a legacy screen still expects it.
-- Two-finger tap: change the world cursor/action mode.
-- Two-finger drag: scroll lists, maps, and panels.
+- Two-finger tap: reminds you that map panning is a two-finger drag when the command bar is visible.
+- Two-finger drag: pan maps and scroll panels only while both fingers are down; lifting returns to the selected command.
 - Three-finger swipe down: Back / Escape.
 - Three-finger hold: highlight nearby interactive objects.
 - Four-finger hold: quicksave.
 
-## Quick toolbar
+## Touch command bar
 
-The toolbar sits above the game HUD and uses full labels:
+The compact bar above the game HUD only adds commands that Fallout does not already expose clearly for touch:
 
-- **Skills**: open the named skill list. Choosing a targeted skill explains what to tap next.
-- **Cursor**: cycle the world cursor between Move, Interact, and Attack. The message display confirms the new mode.
-- **Item Action**: cycle the equipped-item action, including aimed attack and reload where available. The message display names the selected action.
-- **End Turn**: end the current combat turn. It appears dim outside combat and explains why it is unavailable if tapped.
-- **End Combat**: request an end to combat; hostile actors can prevent it. It appears dim outside combat.
-- **Settings**: open native VaultPad Settings.
+- **Move**: tap the ground to move. The selected mode stays highlighted.
+- **Use**: tap a person, door, or object to interact. This is a direct choice, not a cycling cursor button.
+- **Attack**: appears during combat and selects the attack cursor.
+- **Strong Kick / 4, Aim Strong Kick / 5, Reload, or Use Item**: shows the current action and its action-point cost. Tapping it moves to the next action the item supports.
+- **Alternate action**: shows what tapping it will select next, such as **Kick / 4** when Punch is active.
+- **End turn**: appears during combat. Use it when the remaining action points cannot pay for the selected action; points refill after enemies act.
+- **Settings**: opens the native VaultPad Field Terminal.
 
-Turning the quick toolbar off hides the action buttons but keeps one compact **Settings** tab, so the preference can always be reversed.
+Use Fallout's original **Skilldex** control for skills and its original **CMBT** control for attempting to leave combat. End turn is intentionally duplicated because the original target is small and the turn boundary was easy to miss on touch. Choosing **Settings Only** in the Field Terminal hides the action buttons but retains a compact Settings control, so the preference is always reversible.
+
+## Display
+
+- **Full HUD**: 640×480, preserving Fallout's 4:3 aspect and filling a 4:3 iPad with the original bottom interface. Recommended for touch.
+- **More Map**: wider internal canvas with more world visible, but the original 640-pixel HUD becomes narrower and centered.
 
 ## Touch-native legacy screens
 
 - Inventory: tap an item, then tap a hand slot or destination; repeat to move it back. Drag remains available.
 - Barter: tap an item to move it between inventory and offer columns. Quantity entry opens the numeric keyboard.
-- Save/load: the full visible Done and Cancel labels are touch targets.
+- Character editor and save/load: the full visible Done and Cancel labels are touch targets.
 - Dialogue: tap a response row directly.
 
 Hardware keyboard, Magic Keyboard trackpad, Bluetooth mouse, Pencil hover, and accessibility behavior inside the bitmap game UI still require physical-device validation.
