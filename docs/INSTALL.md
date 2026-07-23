@@ -1,14 +1,18 @@
 # Install VaultPad
 
-VaultPad requires macOS, Xcode, CMake 3.25 or newer, and game data from a legally purchased copy of Fallout 2. The repository and release archive contain no game data.
+VaultPad is a source-only iPadOS developer preview. Installation requires macOS, Xcode, an Apple account, CMake 3.25 or newer, and data from a legally purchased copy of Fallout 2. The repository and generated artifacts contain no game data.
 
-## iPad Simulator
-
-Initialize the engine submodule and generate the project:
+## Prepare the checkout
 
 ```bash
+git clone --recursive https://github.com/chrissotraidis/vaultpad.git
+cd vaultpad
 ./scripts/setup.sh
 ```
+
+The first configure may download the engine's pinned open-source dependencies.
+
+## iPad Simulator
 
 List available iPad Simulators and copy the UDID you want to use:
 
@@ -30,7 +34,6 @@ First launch presents VaultPad's importer. Choose the folder containing `master.
 Create an unsigned arm64 app and IPA:
 
 ```bash
-./scripts/build-device.sh Release
 ./scripts/package-release.sh 0.1.0 Release
 ```
 
@@ -45,14 +48,21 @@ The IPA is intentionally unsigned. Install it with a signing/sideloading tool th
 
 ## Sign from Xcode
 
-Generate the device project:
+Add your Apple development team to the ignored `ios/Config/Signing.xcconfig`:
+
+```xcconfig
+DEVELOPMENT_TEAM = YOURTEAMID
+CODE_SIGN_STYLE = Automatic
+```
+
+Build and open the generated device project:
 
 ```bash
-./scripts/configure.sh device
+./scripts/build-device.sh Debug
 open out/build/engine-ios-device/fallout2-ce.xcodeproj
 ```
 
-In Xcode, select the `fallout2-ce` target, choose your Development Team under Signing & Capabilities, select an attached iPad, and Run. If your account cannot use `com.chrissotraidis.vaultpad`, choose a unique bundle identifier for your private build.
+In Xcode, select the `fallout2-ce` target, enable automatic signing, choose your Development Team under Signing & Capabilities, select an attached iPad, and Run. If your account cannot use `com.chrissotraidis.vaultpad`, choose a unique bundle identifier for your private build in `ios/Config/VaultPad.xcconfig`.
 
 ## Game data and saves
 
@@ -63,4 +73,4 @@ In Xcode, select the `fallout2-ce` target, choose your Development Team under Si
 
 ## Current test boundary
 
-The checked-in playtest evidence covers iPadOS 18.5 Simulator on an 11-inch iPad Pro profile. An unsigned arm64 iPhoneOS build and archive have also been compiled and inspected. Physical-device runtime, hardware keyboard/mouse, TestFlight, and App Store installation have not been claimed.
+Simulator builds have run on 11-inch and 13-inch iPad Pro profiles. Signed development builds have also been installed, updated in place, launched, and played on a physical 12.9-inch iPad Pro (6th generation). Hardware keyboard/mouse behavior, broad device coverage, battery and thermal behavior, TestFlight, and App Store installation are not certified. See [TESTING.md](TESTING.md).

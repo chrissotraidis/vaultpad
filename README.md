@@ -21,9 +21,9 @@
 
 Fallout 2 Community Edition makes the game portable. VaultPad makes it playable by touch. Instead of asking every finger movement to impersonate a mouse, VaultPad turns the actions you need into clear, persistent choices.
 
-- **Tap what you mean.** Tap the ground to move, a door to use it, a dialogue response to choose it, or an enemy to attack.
-- **Pan without losing your action.** Two-finger drag moves the map only while both fingers are down, then returns you to Move, Use, or Attack.
-- **Read combat at a glance.** The command strip names the current attack, its action-point cost, the next available action, and End Turn.
+- **Tap what you mean.** Tap the ground to walk or run, a door to use it, a dialogue response to choose it, or an enemy to attack.
+- **Pan without losing your action.** Two-finger drag moves the map only while both fingers are down, then returns you to the selected action.
+- **Read combat at a glance.** The dock names the current attack, its action-point cost, the alternate action, and End Turn.
 - **Keep Fallout's interface intact.** Full HUD preserves the original 4:3 presentation and adds controls only where touch needs help.
 - **Choose your control style.** Hybrid is touch-first, Direct puts every tap under your finger, and Trackpad remains available for precision screens.
 - **Protect your progress.** Background quicksave, foreground audio recovery, and save import/export are built into the iPad shell.
@@ -31,11 +31,11 @@ Fallout 2 Community Edition makes the game portable. VaultPad makes it playable 
 ## See touch in action
 
 <p align="center">
-  <img src="docs/images/vaultpad-gameplay.jpg" alt="Fallout 2 gameplay in VaultPad with the compact touch command strip" width="92%">
+  <img src="docs/images/vaultpad-gameplay.jpg" alt="Fallout 2 gameplay in VaultPad with the compact touch dock" width="92%">
 </p>
 
 <p align="center">
-  <sub><b>Tap the world directly.</b> Move, Use, action cost, next action, and VaultPad settings stay close to Fallout's original HUD.</sub>
+  <sub><b>Tap the world directly.</b> Walk or Run, Use, action cost, alternate action, and VaultPad settings stay close to Fallout's original HUD.</sub>
 </p>
 
 <table>
@@ -46,7 +46,7 @@ Fallout 2 Community Edition makes the game portable. VaultPad makes it playable 
     </td>
     <td width="50%" valign="top">
       <img src="docs/images/vaultpad-field-terminal.png" alt="VaultPad Field Terminal settings for touch controls, display, and save backup">
-      <br><sub><b>One native field terminal.</b> Configure controls, display scale, command-bar visibility, and local save backups without editing configuration files.</sub>
+      <br><sub><b>One native field terminal.</b> Configure controls, display scale, dock visibility, and local save backups without editing configuration files.</sub>
     </td>
   </tr>
 </table>
@@ -57,7 +57,7 @@ Fallout 2 Community Edition makes the game portable. VaultPad makes it playable 
 | --- | --- |
 | Direct gameplay | Tap-to-move, tap-to-use, direct dialogue choices, and finger-sized targets for inventory, barter, character creation, and save/load |
 | Control model | Touch-first Hybrid, fully direct taps, optional Trackpad precision, persistent sensitivity, and multi-finger shortcuts |
-| Combat | Compact Move / Use / Attack strip with current action cost, next action preview, and explicit End Turn guidance |
+| Combat | Compact Walk / Run / Use / Attack dock with current action cost, alternate action preview, and explicit End Turn guidance |
 | Map navigation | Momentary two-finger panning that releases cleanly back to the selected gameplay action |
 | Display | **Full HUD** for the original 640×480 interface or **More Map** for extra scene area |
 | First launch | Native Files folder picker, required-file validation, import progress, and recoverable errors |
@@ -165,21 +165,21 @@ VaultPad starts in **Hybrid** mode: direct taps for play, plus momentary two-fin
 
 | Input | Result |
 | --- | --- |
-| One-finger tap | Move, choose, interact, or activate the control under your finger |
+| One-finger tap | Walk or run, choose, interact, attack, or activate the control under your finger |
 | Two-finger drag | Pan the map while both fingers remain down; lifting restores the selected command |
 | Three-finger swipe down | Back / Escape |
 | Three-finger hold | Highlight nearby interactive objects |
 | Four-finger hold | Quicksave |
 
-The command strip keeps the active interaction explicit:
+The VaultPad dock keeps the active interaction explicit:
 
-- **Move** — tap the ground to walk.
+- **Walk / Run** — tap the ground to move; tap the selected button again to switch pace.
 - **Use** — tap a person, door, or object.
-- **Attack** — appears during combat and selects the attack cursor.
-- **Punch — Cost 3** — names the current action and its action-point cost; tap to cycle supported variants.
-- **Next: Strong Kick** — previews the alternate attack or equipped item before switching.
-- **End Turn** — appears in combat and advances the turn when you cannot spend the remaining action points.
-- **⚙ VP** — opens the VaultPad Field Terminal.
+- **Attack** — selects the targeting cursor and arms the next tap.
+- **Current action** — shows the attack name, Normal or Aimed, and its action-point cost.
+- **Switch to** — previews and selects the alternate attack or equipped hand.
+- **End Turn** — appears in combat and advances the turn.
+- **Gear + VP** — opens the VaultPad Field Terminal.
 
 For inventory, barter, character creation, and the full gesture reference, see [Touch controls](docs/CONTROLS.md).
 
@@ -205,18 +205,17 @@ Run the repository safety checks at any time:
 
 The remaining acceptance work is touch comfort over longer sessions, hardware keyboard/mouse behavior, broader iPad coverage, interruption/thermal testing, and a supported distribution path. TestFlight and App Store availability are not claimed.
 
-- [Build and acceptance plan](docs/BUILD_PLAN.md)
-- [Dated playtest records](docs/playtests/)
-- [Current control-lockup audit](docs/audits/2026-07-21-control-lockup/README.md)
-- [Current VP settings badge audit](docs/audits/2026-07-21-vp-settings-icon/README.md)
-- [FAQ and recovery guidance](docs/FAQ.md)
+- [Documentation index](docs/README.md)
+- [Installation guide](docs/INSTALL.md)
+- [Touch controls](docs/CONTROLS.md)
+- [Testing and acceptance](docs/TESTING.md)
+- [Development workflow](docs/DEVELOPMENT.md)
 
 ## Build a release artifact
 
 Create an unsigned arm64 app and IPA:
 
 ```bash
-./scripts/build-device.sh Release
 ./scripts/package-release.sh 0.1.0 Release
 ```
 
@@ -238,7 +237,7 @@ The IPA is intentionally unsigned. VaultPad does not ship credentials, certifica
 | `ios/Assets.xcassets/` | Original VaultPad app artwork |
 | `ios/Config/` | iPad metadata, build settings, and local signing template |
 | `scripts/` | Setup, Simulator/device builds, install, packaging, and safety checks |
-| `docs/` | Installation, controls, product decisions, audits, and dated playtests |
+| `docs/` | Current installation, controls, compatibility, development, and testing guidance |
 | `ref/` | Optional local-only game-data staging folder; ignored by Git |
 
 ## Mods
