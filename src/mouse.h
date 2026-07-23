@@ -56,6 +56,11 @@ void mouseSetSensitivity(double value);
 // leak into the next screen.
 void mouseResetTouchInput();
 
+// Repositions the software cursor through its normal erase/redraw path. Direct
+// touch calls this on the first finger-down so the pointer and world cursor are
+// aligned before the eventual click is synthesized.
+void mouseMoveToTouchPosition(int x, int y);
+
 void mouseGetPositionInWindow(int win, int* x, int* y);
 bool mouseHitTestInWindow(int win, int left, int top, int right, int bottom);
 void mouseGetWheel(int* x, int* y);

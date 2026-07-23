@@ -40,6 +40,9 @@ static std::deque<Gesture> gestureEventsQueue;
 
 static bool gUseTouchscreenMode = false;
 static bool gUsePanMode = false;
+// Hybrid and Direct reserve a sequence containing two fingers for map panning.
+// This prevents an imperfect lift from falling back to a one-finger Use click.
+static bool gMultiTouchSequence = false;
 
 static int find_touch(SDL_FingerID fingerId)
 {
@@ -118,15 +121,39 @@ void touch_handle_start(SDL_TouchFingerEvent* event)
         touch->currentLocation = touch->startLocation;
         touch->phase = TOUCH_PHASE_BEGAN;
 
-        // Direct touch should recover on finger-down, not after a drag or a
-        // later gesture-processing tick. This is especially important after
-        // returning from native settings or an engine modal. Only the first
-        // finger moves the cursor so a second finger can begin map panning
-        // without pulling the pointer to the gesture centroid.
+        if (hadActiveTouch && gUseTouchscreenMode) {
+            gMultiTouchSequence = true;
+
+            // A first-finger tap can already be progressing through the
+            // hover/press/release pipeline when the second finger arrives.
+            // Cancel it immediately so the pan cannot finish an action on the
+            // object beneath the cursor.
+            mouseResetTouchInput();
+
+            // Promote the sequence cleanly even if the first finger moved
+            // before iOS delivered the second finger-down. Discard queued
+            // single-finger interpretation and make the current two-finger
+            // positions the pan origin, avoiding both a cursor jump and a
+            // delayed stop from stale one-finger gesture events.
+            currentGesture = {};
+            gestureEventsQueue.clear();
+            for (int touchIndex = 0; touchIndex < MAX_TOUCHES; touchIndex++) {
+                Touch& activeTouch = touches[touchIndex];
+                if (activeTouch.used && activeTouch.phase != TOUCH_PHASE_ENDED) {
+                    activeTouch.startLocation = activeTouch.currentLocation;
+                    activeTouch.startTimestamp = event->timestamp;
+                    activeTouch.currentTimestamp = event->timestamp;
+                    activeTouch.phase = TOUCH_PHASE_BEGAN;
+                }
+            }
+        }
+
+        // Direct touch must visibly acquire the pointer on finger-down. Route
+        // this through mouse.cc so the previous software cursor is erased
+        // before the new one is drawn. Only the first finger moves it; a second
+        // finger can begin map panning without pulling the cursor to itself.
         if (gUseTouchscreenMode && !hadActiveTouch) {
-            mouseHideCursor();
-            _mouse_set_position(touch->currentLocation.x, touch->currentLocation.y);
-            mouseShowCursor();
+            mouseMoveToTouchPosition(touch->currentLocation.x, touch->currentLocation.y);
         }
     }
 }
@@ -243,6 +270,7 @@ void touch_process_gesture()
         // Reset continuous gesture if when current sequence is over.
         if (currentGesture.state == kEnded && sequenceEndTimestamp != -1) {
             currentGesture.type = kUnrecognized;
+            gMultiTouchSequence = false;
         }
     } else {
         if (activeCount == 0 && endedCount != 0) {
@@ -260,7 +288,8 @@ void touch_process_gesture()
                 endLatestTimestamp = std::max(endLatestTimestamp, touches[ended[index]].currentTimestamp);
             }
 
-            if (startLatestTimestamp - startEarliestTimestamp <= TAP_MAXIMUM_DURATION
+            if (!gMultiTouchSequence
+                && startLatestTimestamp - startEarliestTimestamp <= TAP_MAXIMUM_DURATION
                 && endLatestTimestamp - endEarliestTimestamp <= TAP_MAXIMUM_DURATION) {
                 TouchLocation currentCentroid = touch_get_current_location_centroid(ended, endedCount);
 
@@ -274,6 +303,10 @@ void touch_process_gesture()
                 // Reset tap gesture immediately.
                 currentGesture.type = kUnrecognized;
             }
+
+            // The sequence is complete. Trackpad mode never sets this flag,
+            // so its existing tap behavior is unchanged.
+            gMultiTouchSequence = false;
         } else if (activeCount != 0 && endedCount == 0) {
             TouchLocation startCentroid = touch_get_start_location_centroid(active, activeCount);
             TouchLocation currentCentroid = touch_get_current_location_centroid(active, activeCount);
@@ -296,11 +329,6 @@ void touch_process_gesture()
                 gestureEventsQueue.push_back(currentGesture);
             }
 
-            if (gUseTouchscreenMode && activeCount == 1) {
-                mouseHideCursor();
-                _mouse_set_position(currentCentroid.x, currentCentroid.y);
-                mouseShowCursor();
-            }
         }
     }
 }
@@ -324,6 +352,7 @@ void touch_reset()
     }
     currentGesture = {};
     gestureEventsQueue.clear();
+    gMultiTouchSequence = false;
 }
 
 void touch_reset_to_direct_context()
@@ -350,6 +379,11 @@ void touch_set_touchscreen_mode(const bool value)
 bool touch_get_touchscreen_mode()
 {
     return gUseTouchscreenMode;
+}
+
+bool touch_is_multi_touch_sequence_active()
+{
+    return gMultiTouchSequence;
 }
 
 void touch_set_pan_mode(const bool value)

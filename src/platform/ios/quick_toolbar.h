@@ -30,6 +30,10 @@ bool quickToolbarContainsPoint(int x, int y);
 // Does not move the cursor and does not enqueue mouse events.
 bool quickToolbarHandleTap(int x, int y);
 
+// Resolves the dock's explicit Walk/Run state while preserving Shift as a
+// temporary inversion for players using a hardware keyboard.
+bool quickToolbarShouldRunMovement(bool shiftHeld, bool defaultRunning);
+
 #else
 
 inline void quickToolbarInit() { }
@@ -40,6 +44,7 @@ inline void quickToolbarRefresh() { }
 inline bool quickToolbarIsWindow(int) { return false; }
 inline bool quickToolbarContainsPoint(int, int) { return false; }
 inline bool quickToolbarHandleTap(int, int) { return false; }
+inline bool quickToolbarShouldRunMovement(bool shiftHeld, bool defaultRunning) { return shiftHeld ? !defaultRunning : defaultRunning; }
 inline void quickToolbarSetEnabled(bool) { }
 
 #endif

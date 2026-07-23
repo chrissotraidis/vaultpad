@@ -471,7 +471,7 @@ int elevatorSelectLevel(int elevator, int* mapPtr, int* elevationPtr, int* tileP
     }
 
     elevatorWindowFree();
-    touch_set_touchscreen_mode(false);
+    touch_reset_to_direct_context();
 
     if (keyCode >= 0) {
         const ElevatorDescription* description = &(elevatorDescription[keyCode]);

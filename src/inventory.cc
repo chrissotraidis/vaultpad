@@ -2063,8 +2063,7 @@ static void _exit_inventory(bool shouldEnableIso)
     partySlotFrmImage.unlock();
 
     _gmouse_enable();
-    touch_set_touchscreen_mode(false);
-    touch_set_pan_mode(false);
+    touch_reset_to_direct_context();
 
     if (_dropped_explosive) {
         Attack attack;

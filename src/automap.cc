@@ -507,7 +507,7 @@ void automapShow(bool isInGame, bool isUsingScanner)
     windowDestroy(window);
     gAutomapWindow = -1;
     fontSetCurrent(oldFont);
-    touch_set_touchscreen_mode(false);
+    touch_reset_to_direct_context();
 }
 
 int automapGetWindow()

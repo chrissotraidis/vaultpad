@@ -7,6 +7,7 @@
 #include "color.h"
 #include "dinput.h"
 #include "display_monitor.h"
+#include "game.h"
 #include "input.h"
 #include "interface.h"
 #include "kb.h"
@@ -141,6 +142,42 @@ static int gTouchPanAccumulatorX = 0;
 static int gTouchPanAccumulatorY = 0;
 static int gTouchPreviousX = 0;
 static int gTouchPreviousY = 0;
+static unsigned int gTouchPanLastStepTimestamp = 0;
+
+static bool directTouchDragIsEnabled()
+{
+    // Preferences is the one original Fallout screen whose sliders require a
+    // true press-drag-release sequence. Gameplay drags remain cursor movement,
+    // so sliding a finger across the world cannot accidentally issue actions.
+    return touch_get_touchscreen_mode()
+        && GameMode::isInGameMode(GameMode::kPreferences);
+}
+
+static void mouseSimulateDirectTouchAt(int x, int y, int buttons)
+{
+    if (mouseDeviceUsesRelativeMode()) {
+        // Fullscreen iPad builds own the cursor and therefore interpret
+        // _mouse_simulate_input coordinates as deltas. Convert the absolute
+        // finger location to a delta from the cursor hotspot so direct touch
+        // still lands exactly beneath the finger while retaining the normal
+        // cursor erase/redraw path.
+        int currentX;
+        int currentY;
+        mouseGetPosition(&currentX, &currentY);
+        _mouse_simulate_input(x - currentX, y - currentY, buttons);
+    } else {
+        _mouse_simulate_input(x, y, buttons);
+    }
+}
+
+void mouseMoveToTouchPosition(int x, int y)
+{
+    if (!gMouseInitialized || cursorIsHidden()) {
+        return;
+    }
+
+    mouseSimulateDirectTouchAt(x, y, 0);
+}
 
 // 0x4C9F40
 int mouseInit()
@@ -558,7 +595,11 @@ void _mouse_info()
             }
 
             if (touch_get_touchscreen_mode()) {
-                _mouse_set_position(gesture.x, gesture.y);
+                // Route absolute touch movement through the normal mouse path.
+                // Calling _mouse_set_position directly changes the coordinates
+                // without restoring the pixels beneath the old cursor, which
+                // leaves stale cursor sprites behind on iPad.
+                mouseSimulateDirectTouchAt(gesture.x, gesture.y, 0);
                 gPendingTouchHover = button != 0;
                 gPendingTouchButtonPress = button;
             } else {
@@ -591,7 +632,14 @@ void _mouse_info()
                 }
             } else if (gesture.type == kPan) {
                 if (!touch_get_pan_mode() && gesture.numberOfTouches == 1) {
-                    if (!touch_get_touchscreen_mode()) {
+                    if (touch_get_touchscreen_mode()) {
+                        // A direct pointer must stay under the finger for the
+                        // whole drag, not only until the pan recognizer begins.
+                        int button = directTouchDragIsEnabled() && gesture.state != kEnded
+                            ? MOUSE_STATE_LEFT_BUTTON_DOWN
+                            : 0;
+                        mouseSimulateDirectTouchAt(gesture.x, gesture.y, button);
+                    } else {
                         int deltaX = static_cast<int>((gesture.x - gTouchPreviousX) * settings.input.touch_sensitivity);
                         int deltaY = static_cast<int>((gesture.y - gTouchPreviousY) * settings.input.touch_sensitivity);
                         _mouse_simulate_input(deltaX, deltaY, 0);
@@ -601,31 +649,44 @@ void _mouse_info()
                     // wheel step. Dividing each event independently made slow
                     // drags do nothing and fast drags fire a step on nearly
                     // every frame, which felt both sticky and jumpy on iPad.
-                    int threshold = touch_get_pan_mode() ? 8 : 12;
+                    // Fallout's camera still advances in fixed cells, but a
+                    // finger should not need to travel a full cell before the
+                    // map responds. These thresholds keep deliberate control
+                    // without making ordinary two-finger drags feel stuck.
+                    int horizontalThreshold = touch_get_pan_mode() ? 8 : 12;
+                    int verticalThreshold = touch_get_pan_mode() ? 8 : 10;
                     gTouchPanAccumulatorX += gTouchPreviousX - gesture.x;
                     gTouchPanAccumulatorY += gesture.y - gTouchPreviousY;
 
                     gMouseWheelX = 0;
-                    if (gTouchPanAccumulatorX >= threshold) {
-                        gMouseWheelX = 1;
-                        gTouchPanAccumulatorX -= threshold;
-                    } else if (gTouchPanAccumulatorX <= -threshold) {
-                        gMouseWheelX = -1;
-                        gTouchPanAccumulatorX += threshold;
-                    }
-
                     gMouseWheelY = 0;
-                    if (gTouchPanAccumulatorY >= threshold) {
-                        gMouseWheelY = 1;
-                        gTouchPanAccumulatorY -= threshold;
-                    } else if (gTouchPanAccumulatorY <= -threshold) {
-                        gMouseWheelY = -1;
-                        gTouchPanAccumulatorY += threshold;
-                    }
+                    // mapScroll accepts at most one fixed step every 33 ms. If
+                    // touch emits faster than that, Fallout drops the extra
+                    // events after we already consumed the finger travel. Match
+                    // that cadence here and retain the accumulator so movement
+                    // remains responsive and even instead of sticky.
+                    if (gTouchPanLastStepTimestamp == 0 || getTicksSince(gTouchPanLastStepTimestamp) >= 33) {
+                        if (gTouchPanAccumulatorX >= horizontalThreshold) {
+                            gMouseWheelX = 1;
+                            gTouchPanAccumulatorX -= horizontalThreshold;
+                        } else if (gTouchPanAccumulatorX <= -horizontalThreshold) {
+                            gMouseWheelX = -1;
+                            gTouchPanAccumulatorX += horizontalThreshold;
+                        }
 
-                    if (gMouseWheelX != 0 || gMouseWheelY != 0) {
-                        gMouseEvent |= MOUSE_EVENT_WHEEL;
-                        _raw_buttons |= MOUSE_EVENT_WHEEL;
+                        if (gTouchPanAccumulatorY >= verticalThreshold) {
+                            gMouseWheelY = 1;
+                            gTouchPanAccumulatorY -= verticalThreshold;
+                        } else if (gTouchPanAccumulatorY <= -verticalThreshold) {
+                            gMouseWheelY = -1;
+                            gTouchPanAccumulatorY += verticalThreshold;
+                        }
+
+                        if (gMouseWheelX != 0 || gMouseWheelY != 0) {
+                            gTouchPanLastStepTimestamp = getTicks();
+                            gMouseEvent |= MOUSE_EVENT_WHEEL;
+                            _raw_buttons |= MOUSE_EVENT_WHEEL;
+                        }
                     }
                 }
             }
@@ -864,6 +925,7 @@ void mouseResetTouchInput()
     gTouchPanAccumulatorY = 0;
     gTouchPreviousX = 0;
     gTouchPreviousY = 0;
+    gTouchPanLastStepTimestamp = 0;
     gMouseWheelX = 0;
     gMouseWheelY = 0;
     last_buttons = 0;

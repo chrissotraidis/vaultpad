@@ -37,6 +37,7 @@
 #include "svga.h"
 #include "text_font.h"
 #include "tile.h"
+#include "touch.h"
 #include "window_manager.h"
 
 namespace fallout {
@@ -316,6 +317,14 @@ Object* gGameMouseHexCursor;
 // 0x596C74
 static Object* gGameMousePointedObject;
 
+#if __APPLE__ && TARGET_OS_IOS
+// While two fingers pan the map, the world moves beneath the otherwise fixed
+// interaction cursor. Fallout's normal hover scan would treat each object
+// passing under that point as a new look target and print repeated "You see"
+// messages. Suspend only the world cursor/hover scan until both fingers lift.
+static bool gTouchPanSuppressingGameMouse = false;
+#endif
+
 static void _gmouse_3d_enable_modes();
 static int gameMouseSetBouncingCursorFid(int fid);
 static int gameMouseRenderAccuracy(const char* string, int color);
@@ -524,6 +533,30 @@ void gameMouseRefresh()
     if (!gGameMouseInitialized) {
         return;
     }
+
+#if __APPLE__ && TARGET_OS_IOS
+    if (touch_is_multi_touch_sequence_active()) {
+        if (!gTouchPanSuppressingGameMouse) {
+            gameMouseObjectsHide();
+            if (gGameMouseHighlightedItem != nullptr) {
+                _gmouse_remove_item_outline(gGameMouseHighlightedItem);
+            }
+            gGameMousePointedObject = nullptr;
+            gTouchPanSuppressingGameMouse = true;
+        }
+        return;
+    }
+
+    if (gTouchPanSuppressingGameMouse) {
+        // Force one clean cursor refresh at the unchanged pointer position,
+        // then require the normal hover delay before describing anything.
+        gTouchPanSuppressingGameMouse = false;
+        gGameMouseLastX = -1;
+        gGameMouseLastY = -1;
+        _gmouse_3d_hover_test = false;
+        _gmouse_3d_last_move_time = getTicks();
+    }
+#endif
 
     int mouseX;
     int mouseY;
@@ -974,16 +1007,11 @@ void _gmouse_handle_event(int mouseX, int mouseY, int mouseState)
                 actionPoints = -1;
             }
 
-            if (gPressedPhysicalKeys[SDL_SCANCODE_LSHIFT] || gPressedPhysicalKeys[SDL_SCANCODE_RSHIFT]) {
-                if (settings.preferences.running) {
-                    _dude_move(actionPoints);
-                    return;
-                }
-            } else {
-                if (!settings.preferences.running) {
-                    _dude_move(actionPoints);
-                    return;
-                }
+            bool shiftHeld = gPressedPhysicalKeys[SDL_SCANCODE_LSHIFT]
+                || gPressedPhysicalKeys[SDL_SCANCODE_RSHIFT];
+            if (!quickToolbarShouldRunMovement(shiftHeld, settings.preferences.running)) {
+                _dude_move(actionPoints);
+                return;
             }
 
             _dude_run(actionPoints);

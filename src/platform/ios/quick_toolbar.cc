@@ -56,10 +56,10 @@ namespace {
     constexpr ToolbarEntry kButtons[] = {
         { ToolbarAction::MoveMode, "Move", 38, false },
         { ToolbarAction::UseMode, "Use", 34, false },
-        { ToolbarAction::AttackMode, "Attack", 44, false },
-        { ToolbarAction::ItemAction, nullptr, 104, true },
-        { ToolbarAction::AlternateAction, nullptr, 112, false },
-        { ToolbarAction::EndTurn, "End turn", 54, true },
+        { ToolbarAction::AttackMode, "Attack", 50, false },
+        { ToolbarAction::ItemAction, nullptr, 96, true },
+        { ToolbarAction::AlternateAction, nullptr, 108, false },
+        { ToolbarAction::EndTurn, nullptr, 62, true },
 #ifdef FALLOUT_IOS_PRODUCT_BOOTSTRAP
         { ToolbarAction::Settings, nullptr, 46, true },
 #endif
@@ -80,6 +80,16 @@ namespace {
     int gToolbarWidth = 0;
     bool gShown = false;
     bool gEnabled = true;
+    bool gMovementModeInitialized = false;
+    bool gMovementRuns = false;
+
+    void ensureMovementModeInitialized()
+    {
+        if (!gMovementModeInitialized) {
+            gMovementRuns = settings.preferences.running;
+            gMovementModeInitialized = true;
+        }
+    }
 
     int currentButtonHeight()
     {
@@ -272,7 +282,7 @@ namespace {
         static char message[128];
         int availableActionPoints = gDude != nullptr ? gDude->data.critter.combat.ap : 0;
         if (isInCombat() && attack.actionPoints > availableActionPoints) {
-            snprintf(message, sizeof(message), "%s costs %d action points; you have %d. Choose End turn.", attack.name, attack.actionPoints, availableActionPoints);
+            snprintf(message, sizeof(message), "%s costs %d action points; you have %d. Choose End Turn.", attack.name, attack.actionPoints, availableActionPoints);
         } else if (attack.aiming) {
             snprintf(message, sizeof(message), "Aimed %s costs %d action points. Pick a body part; it can still miss.", attack.name, attack.actionPoints);
         } else {
@@ -288,9 +298,7 @@ namespace {
         // visible HUD and cursor are actually set to Punch.
         CurrentAttack attack = currentAttack();
         if (attack.valid) {
-            static char label[64];
-            snprintf(label, sizeof(label), "%s%s - Cost %d", attack.aiming ? "Aim " : "", attack.name, attack.actionPoints);
-            return label;
+            return attack.name;
         }
 
         int leftAction;
@@ -314,9 +322,7 @@ namespace {
         int otherHand = interfaceGetCurrentHand() == 0 ? 1 : 0;
         CurrentAttack attack = attackForHand(otherHand);
         if (attack.valid) {
-            static char label[64];
-            snprintf(label, sizeof(label), "Next: %s", attack.name);
-            return label;
+            return attack.name;
         }
 
         int leftAction;
@@ -334,6 +340,10 @@ namespace {
 
     const char* entryLabel(const ToolbarEntry& entry)
     {
+        if (entry.action == ToolbarAction::MoveMode) {
+            ensureMovementModeInitialized();
+            return gMovementRuns ? "Run" : "Walk";
+        }
         if (entry.action == ToolbarAction::ItemAction) {
             return itemActionLabel();
         }
@@ -405,6 +415,32 @@ namespace {
         drawCenteredLabel(buffer, pitch, badgeX + 18, badgeY, badgeWidth - 18, badgeHeight, "VP", letters);
     }
 
+    void paintCurrentAction(unsigned char* buffer, int pitch, int x, int y, int w, int h, unsigned char color)
+    {
+        CurrentAttack attack = currentAttack();
+        if (!attack.valid) {
+            drawCenteredLabel(buffer, pitch, x, y, w, h, itemActionLabel(), color);
+            return;
+        }
+
+        // The action name and its cost are different pieces of information.
+        // Giving each its own line keeps every unarmed and weapon name intact
+        // instead of clipping prose such as "Aim Punch - Cost 4".
+        char detail[32];
+        snprintf(detail, sizeof(detail), attack.aiming ? "Aimed | %d AP" : "Normal | %d AP", attack.actionPoints);
+
+        int halfHeight = h / 2;
+        drawCenteredLabel(buffer, pitch, x + 2, y, w - 4, halfHeight + 1, attack.name, color);
+        drawCenteredLabel(buffer, pitch, x + 2, y + halfHeight - 1, w - 4, h - halfHeight + 1, detail, color);
+    }
+
+    void paintTwoLineLabel(unsigned char* buffer, int pitch, int x, int y, int w, int h, const char* top, const char* bottom, unsigned char color)
+    {
+        int halfHeight = h / 2;
+        drawCenteredLabel(buffer, pitch, x + 2, y, w - 4, halfHeight + 1, top, color);
+        drawCenteredLabel(buffer, pitch, x + 2, y + halfHeight - 1, w - 4, h - halfHeight + 1, bottom, color);
+    }
+
     void paintPanelButton(unsigned char* buffer, int pitch, int x, int y, int w, int h, const ToolbarEntry& entry, bool selected)
     {
         unsigned char panel = selected
@@ -426,6 +462,12 @@ namespace {
 
         if (entry.action == ToolbarAction::Settings) {
             paintVaultPadBadge(buffer, pitch, x, y, w, h);
+        } else if (entry.action == ToolbarAction::ItemAction) {
+            paintCurrentAction(buffer, pitch, x, y, w, h, intensityColorTable[COLOR_LIGHT_GOLD_2][selected ? 92 : 58]);
+        } else if (entry.action == ToolbarAction::AlternateAction) {
+            paintTwoLineLabel(buffer, pitch, x, y, w, h, "Switch to", entryLabel(entry), intensityColorTable[COLOR_LIGHT_GOLD_2][selected ? 92 : 58]);
+        } else if (entry.action == ToolbarAction::EndTurn) {
+            paintTwoLineLabel(buffer, pitch, x, y, w, h, "End", "Turn", intensityColorTable[COLOR_LIGHT_GOLD_2][selected ? 92 : 58]);
         } else {
             drawCenteredLabel(buffer, pitch, x, y, w, h, entryLabel(entry), intensityColorTable[COLOR_LIGHT_GOLD_2][selected ? 92 : 58]);
         }
@@ -475,7 +517,9 @@ namespace {
         gToolbarX = gEnabled
             ? (screenGetWidth() - gToolbarWidth) / 2
             : screenGetWidth() - gToolbarWidth - kCollapsedRightMargin;
-        gToolbarY = screenGetHeight() - INTERFACE_BAR_HEIGHT - currentToolbarHeight() - kToolbarBottomMargin;
+        // Fallout uses the row directly above the HUD for status indicators
+        // such as ADDICT and SNEAK. Keep the touch dock clear of that row.
+        gToolbarY = screenGetHeight() - INTERFACE_BAR_HEIGHT - INDICATOR_BOX_HEIGHT - currentToolbarHeight() - kToolbarBottomMargin;
 
         gToolbarWindow = windowCreate(gToolbarX, gToolbarY, gToolbarWidth, currentToolbarHeight(), COLOR_BLACK, WINDOW_HIDDEN | WINDOW_TRANSPARENT);
         if (gToolbarWindow == -1) {
@@ -606,22 +650,26 @@ bool quickToolbarHandleTap(int x, int y)
 #endif
         break;
     case ToolbarAction::MoveMode:
-        gameMouseSetMode(GAME_MOUSE_MODE_MOVE);
-        displayMonitorAddMessage("Movement selected. Tap the ground.");
+        ensureMovementModeInitialized();
+        if (gameMouseGetMode() == GAME_MOUSE_MODE_MOVE) {
+            gMovementRuns = !gMovementRuns;
+        } else {
+            gameMouseSetMode(GAME_MOUSE_MODE_MOVE);
+        }
+        displayMonitorAddMessage(gMovementRuns
+                ? "Run selected. Tap the ground; tap Run again to walk."
+                : "Walk selected. Tap the ground; tap Walk again to run.");
+        quickToolbarRefresh();
         break;
     case ToolbarAction::UseMode:
         gameMouseSetMode(GAME_MOUSE_MODE_ARROW);
         displayMonitorAddMessage("Interaction selected. Tap a person, door, or object.");
         break;
     case ToolbarAction::AttackMode: {
-        CurrentAttack attack = currentAttack();
         showAttackGuidance();
-        if (attack.valid
-            && isInCombat()
-            && gDude != nullptr
-            && attack.actionPoints > gDude->data.critter.combat.ap) {
-            break;
-        }
+        // Always arm targeting. Fallout remains the source of truth for range
+        // and action-point checks, while the dock never appears stuck in Walk
+        // or Use just because the current attack is temporarily unavailable.
         gameMouseSetMode(GAME_MOUSE_MODE_CROSSHAIR);
         break;
     }
@@ -640,6 +688,7 @@ bool quickToolbarHandleTap(int x, int y)
             break;
         default:
             showAttackGuidance();
+            gameMouseSetMode(GAME_MOUSE_MODE_CROSSHAIR);
             break;
         }
         quickToolbarRefresh();
@@ -650,8 +699,9 @@ bool quickToolbarHandleTap(int x, int y)
             CurrentAttack attack = currentAttack();
             static char message[128];
             if (attack.valid) {
-                snprintf(message, sizeof(message), "%s selected; costs %d action points.", attack.name, attack.actionPoints);
+                snprintf(message, sizeof(message), "%s selected. Tap a target; it costs %d action points.", attack.name, attack.actionPoints);
                 displayMonitorAddMessage(message);
+                gameMouseSetMode(GAME_MOUSE_MODE_CROSSHAIR);
             } else {
                 displayMonitorAddMessage("Alternate item selected.");
             }
@@ -669,6 +719,16 @@ bool quickToolbarHandleTap(int x, int y)
     }
 
     return true;
+}
+
+bool quickToolbarShouldRunMovement(bool shiftHeld, bool defaultRunning)
+{
+    if (!gEnabled) {
+        return shiftHeld ? !defaultRunning : defaultRunning;
+    }
+
+    ensureMovementModeInitialized();
+    return shiftHeld ? !gMovementRuns : gMovementRuns;
 }
 
 void quickToolbarRefresh()

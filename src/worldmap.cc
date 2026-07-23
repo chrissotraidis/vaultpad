@@ -3358,6 +3358,7 @@ static int wmWorldMapFunc(int a1)
     }
 
     wmFadeIn();
+    touch_reset_to_direct_context();
 
     return rc;
 }

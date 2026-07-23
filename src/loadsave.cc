@@ -1851,7 +1851,7 @@ static int lsgWindowFree(int windowType)
 
     colorCycleEnable();
     gameMouseSetCursor(MOUSE_CURSOR_ARROW);
-    touch_set_touchscreen_mode(false);
+    touch_reset_to_direct_context();
 
     return 0;
 }

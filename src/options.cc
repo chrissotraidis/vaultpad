@@ -20,6 +20,7 @@
 #include "svga.h"
 #include "text_font.h"
 #include "tile.h"
+#include "touch.h"
 #include "window_manager.h"
 
 namespace fallout {
@@ -49,6 +50,7 @@ typedef enum OptionsWindowFrm {
 static int optionsWindowInit();
 static int optionsWindowFree();
 static void optionsWindowCleanup(bool restoreWorldState);
+static void restoreOptionsTouchContext();
 static void _ShadeScreen(bool preserveWorldState);
 
 struct OptionsMenuButtonSpec {
@@ -164,6 +166,7 @@ int showOptions()
             case OPTIONS_MENU_BUTTON_PREFERENCES:
                 // PREFERENCES
                 doPreferences(false);
+                restoreOptionsTouchContext();
                 break;
             case KEY_UPPERCASE_H:
             case KEY_LOWERCASE_H:
@@ -171,9 +174,7 @@ int showOptions()
                 if (optionsMenuHelpEnabled) {
                     soundPlayFile("ib1p1xx1");
                     showHelp();
-                    gameMouseSetCursor(MOUSE_CURSOR_ARROW);
-                    mouseShowCursor();
-                    windowRefresh(optionsWindow);
+                    restoreOptionsTouchContext();
                 }
                 break;
             case KEY_PLUS:
@@ -205,6 +206,19 @@ int showOptions()
     optionsWindowFree();
 
     return rc;
+}
+
+static void restoreOptionsTouchContext()
+{
+    // Modal screens own and repaint the software cursor independently. Reset
+    // the completed gesture before redrawing Options so stale cursor sprites
+    // cannot survive behind the menu.
+    touch_reset();
+    mouseResetTouchInput();
+    touch_set_touchscreen_mode(true);
+    gameMouseSetCursor(MOUSE_CURSOR_ARROW);
+    mouseShowCursor();
+    windowRefresh(optionsWindow);
 }
 
 // 0x48FE14 OptnStart
@@ -400,7 +414,14 @@ static void optionsWindowCleanup(bool restoreWorldState)
         mouseHideCursor();
     }
 
+#if __APPLE__ && TARGET_OS_IOS
+    // Options temporarily owns the cursor, but leaving it must restore the
+    // player's configured direct/trackpad behavior. Forcing false here left
+    // Hybrid and Direct acting like a trackpad immediately after Done.
+    touch_reset_to_direct_context();
+#else
     touch_set_touchscreen_mode(false);
+#endif
 }
 
 // 0x4902B0 PauseWindow

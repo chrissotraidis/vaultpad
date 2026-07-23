@@ -578,9 +578,8 @@ int pipboyOpen(int intent)
         sharedFpsLimiter.throttle();
     }
 
-    touch_set_touchscreen_mode(false);
-
     pipboyWindowFree();
+    touch_reset_to_direct_context();
 
     return 0;
 }

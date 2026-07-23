@@ -1048,8 +1048,6 @@ int _gdialogExitFromScript()
         gameDialogRestoreCenterTile();
     }
 
-    touch_set_touchscreen_mode(false);
-
     GameMode::exitGameMode(GameMode::kDialog);
 
     GameMode::enterGameMode(GameMode::kSpecial);
@@ -1109,6 +1107,7 @@ int _gdialogExitFromScript()
         gameMouseObjectsShow();
     }
 
+    touch_reset_to_direct_context();
     _gdDialogWentOff = true;
 
     return 0;

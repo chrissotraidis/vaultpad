@@ -36,6 +36,7 @@ void touch_reset();
 void touch_reset_to_direct_context();
 void touch_set_touchscreen_mode(const bool value);
 bool touch_get_touchscreen_mode();
+bool touch_is_multi_touch_sequence_active();
 void touch_set_pan_mode(const bool value);
 bool touch_get_pan_mode();
 

@@ -1211,6 +1211,11 @@ static int preferencesWindowFree()
     fontSetCurrent(_oldFont);
 
     messageListFree(&gPreferencesMessageList);
+    // Preferences temporarily owns direct touch for its sliders. Clear the
+    // gesture here; the enclosing Options screen restores its own direct-touch
+    // context after it has repainted.
+    touch_reset();
+    mouseResetTouchInput();
     touch_set_touchscreen_mode(false);
 
     return 0;
