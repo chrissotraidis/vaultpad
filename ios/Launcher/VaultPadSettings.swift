@@ -328,16 +328,19 @@ private final class VaultPadSettingsModel: ObservableObject {
 }
 
 private enum VaultPadTheme {
-    static let background = Color(red: 0.055, green: 0.06, blue: 0.048)
-    static let panel = Color(red: 0.105, green: 0.105, blue: 0.082)
-    static let panelRaised = Color(red: 0.145, green: 0.135, blue: 0.09)
-    static let gold = Color(red: 0.82, green: 0.72, blue: 0.38)
-    static let brass = Color(red: 0.52, green: 0.40, blue: 0.13)
-    static let ink = Color(red: 0.085, green: 0.075, blue: 0.045)
-    static let text = Color.white.opacity(0.86)
-    static let muted = Color.white.opacity(0.62)
-    static let hairline = Color(red: 0.60, green: 0.52, blue: 0.28).opacity(0.60)
-    static let terminal = Color(red: 0.45, green: 0.78, blue: 0.36)
+    static let background = Color(red: 0.045, green: 0.048, blue: 0.035)
+    static let panel = Color(red: 0.095, green: 0.095, blue: 0.065)
+    static let panelRaised = Color(red: 0.16, green: 0.145, blue: 0.085)
+    static let metal = Color(red: 0.22, green: 0.21, blue: 0.14)
+    static let metalShadow = Color(red: 0.075, green: 0.07, blue: 0.045)
+    static let screen = Color(red: 0.035, green: 0.065, blue: 0.025)
+    static let gold = Color(red: 0.84, green: 0.71, blue: 0.32)
+    static let brass = Color(red: 0.48, green: 0.34, blue: 0.09)
+    static let ink = Color(red: 0.07, green: 0.06, blue: 0.025)
+    static let text = Color(red: 0.86, green: 0.84, blue: 0.68)
+    static let muted = Color(red: 0.72, green: 0.70, blue: 0.58)
+    static let hairline = Color(red: 0.60, green: 0.49, blue: 0.20).opacity(0.72)
+    static let terminal = Color(red: 0.49, green: 0.84, blue: 0.36)
 }
 
 private struct VaultPadButtonStyle: ButtonStyle {
@@ -345,16 +348,16 @@ private struct VaultPadButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 14, weight: .bold, design: .monospaced))
+            .font(.system(size: 16, weight: .bold, design: .monospaced))
             .foregroundStyle(primary ? VaultPadTheme.ink : VaultPadTheme.gold)
-            .padding(.horizontal, 18)
-            .frame(minHeight: 44)
+            .padding(.horizontal, 16)
+            .frame(minHeight: 50)
             .background(
                 primary ? VaultPadTheme.gold.opacity(configuration.isPressed ? 0.72 : 0.92) : VaultPadTheme.panelRaised.opacity(configuration.isPressed ? 0.95 : 0.62),
-                in: RoundedRectangle(cornerRadius: 3)
+                in: RoundedRectangle(cornerRadius: 1)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 3)
+                RoundedRectangle(cornerRadius: 1)
                     .stroke(primary ? VaultPadTheme.gold : VaultPadTheme.hairline, lineWidth: 1)
             }
     }
@@ -372,8 +375,8 @@ private struct VaultPadChoiceStrip<Value: Hashable>: View {
                     selection = option.value
                 } label: {
                     Text(option.label)
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        .frame(maxWidth: .infinity, minHeight: 46)
                         .foregroundStyle(selection == option.value ? VaultPadTheme.ink : VaultPadTheme.text)
                         .background(selection == option.value ? VaultPadTheme.gold : VaultPadTheme.background.opacity(0.72))
                 }
@@ -381,9 +384,9 @@ private struct VaultPadChoiceStrip<Value: Hashable>: View {
             }
         }
         .padding(2)
-        .background(VaultPadTheme.background.opacity(0.8), in: RoundedRectangle(cornerRadius: 4))
+        .background(VaultPadTheme.screen, in: RoundedRectangle(cornerRadius: 1))
         .overlay {
-            RoundedRectangle(cornerRadius: 4)
+            RoundedRectangle(cornerRadius: 1)
                 .stroke(VaultPadTheme.hairline, lineWidth: 1)
         }
     }
@@ -398,7 +401,7 @@ private struct VaultPadSettingsView: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [VaultPadTheme.background, Color(red: 0.075, green: 0.072, blue: 0.05)],
+                colors: [VaultPadTheme.background, Color(red: 0.075, green: 0.068, blue: 0.035)],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -406,35 +409,35 @@ private struct VaultPadSettingsView: View {
             VStack(spacing: 0) {
                 HStack {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("VAULTPAD // FIELD TERMINAL")
-                            .font(.system(size: 18, weight: .black, design: .monospaced))
-                            .tracking(4)
+                        Text("VAULTPAD  FIELD TERMINAL")
+                            .font(.system(size: 22, weight: .black, design: .monospaced))
+                            .tracking(3.2)
                             .foregroundStyle(VaultPadTheme.gold)
-                        Text("TOUCH  /  DISPLAY  /  SAVE BACKUP   •   Changes apply only when you choose Apply & Return.")
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        Text("TOUCH  •  DISPLAY  •  SAVES     LOCAL SETTINGS — APPLY TO CONFIRM")
+                            .font(.system(size: 14, weight: .semibold, design: .monospaced))
                             .foregroundStyle(VaultPadTheme.muted)
                     }
                     Spacer()
                     Button("CANCEL") { close() }
                         .buttonStyle(VaultPadButtonStyle())
                 }
-                .padding(.bottom, 18)
+                .padding(.bottom, 16)
 
                 Rectangle()
                     .fill(VaultPadTheme.hairline)
                     .frame(height: 1)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 16)
 
-                HStack(alignment: .top, spacing: 16) {
+                HStack(alignment: .top, spacing: 14) {
                     settingsCard("01", icon: "hand.tap.fill", title: "TOUCH CONTROLS") {
-                        fieldLabel("CONTROL MODEL")
+                        fieldLabel("POINTER MODE")
                         VaultPadChoiceStrip(options: [
                             ("HYBRID", "hybrid"),
                             ("DIRECT", "touch"),
                             ("TRACKPAD", "trackpad"),
                         ], selection: $model.touchMode)
                         Text(touchModeDescription)
-                            .font(.caption)
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(VaultPadTheme.muted)
 
                         fieldLabel("TRACKPAD SPEED  \(String(format: "%.1f", model.sensitivity))×")
@@ -451,20 +454,20 @@ private struct VaultPadSettingsView: View {
                         .disabled(model.touchMode != "trackpad")
                         .opacity(model.touchMode == "trackpad" ? 1 : 0.38)
 
-                        fieldLabel("GAMEPLAY COMMAND BAR")
+                        fieldLabel("VAULTPAD DOCK")
                         VaultPadChoiceStrip(options: [
-                            ("FULL BAR", true),
-                            ("SETTINGS ONLY", false),
+                            ("FULL DOCK", true),
+                            ("VP ONLY", false),
                         ], selection: $model.toolbarVisible)
                         Text(commandBarDescription)
-                            .font(.caption)
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(VaultPadTheme.muted)
 
                         fieldLabel("TOUCH SHORTCUTS")
                         VStack(alignment: .leading, spacing: 5) {
-                            controlHint("TWO-FINGER DRAG", "Pan the map only while both fingers are down.")
-                            controlHint("DIRECT TAP", "The cursor lands under your finger before the click.")
-                            controlHint("TRACKPAD", "One-finger drag moves the cursor; tap clicks it.")
+                            controlHint("TWO-FINGER PAN", "Drag anywhere on the map. Lift both fingers to stop.")
+                            controlHint("WALK / RUN", "Tap the selected movement button again to switch.")
+                            controlHint("USE / ATTACK", "Choosing either mode arms your next tap.")
                         }
                     }
 
@@ -477,18 +480,18 @@ private struct VaultPadSettingsView: View {
                         Text(model.displayPreset == "expanded"
                             ? "Shows more of the map, but Fallout’s original bottom HUD is narrower and centered."
                             : "Fills a 4:3 iPad with Fallout’s original HUD. Aspect ratio is preserved.")
-                            .font(.callout)
+                            .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(VaultPadTheme.text)
                         statusLine("RESTART REQUIRED")
                         Text("Full HUD is the touch default. More Map is optional for players who prefer extra scene area over larger controls.")
-                            .font(.caption)
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(VaultPadTheme.muted)
 
-                        fieldLabel("COMBAT READOUT")
+                        fieldLabel("DOCK READOUT")
                         VStack(alignment: .leading, spacing: 7) {
-                            controlHint("ACTION POINTS", "The green lights in Fallout’s HUD. Attacks spend them; End turn refills them.")
-                            controlHint("ACTION", "Tap the named attack to cycle normal and aimed versions.")
-                            controlHint("NEXT ACTION", "The Next button previews the alternate attack or equipped item before you switch.")
+                            controlHint("ACTION + COST", "Current attack and action-point cost. Tap to cycle normal and aimed attacks.")
+                            controlHint("ALTERNATE", "Switches hands or attacks and arms targeting.")
+                            controlHint("END TURN", "Ends your turn; action points refill after enemies act.")
                             controlHint("TARGET %", "Your chance to hit. Aimed attacks cost more and can still miss.")
                         }
                     }
@@ -499,8 +502,8 @@ private struct VaultPadSettingsView: View {
                             .buttonStyle(VaultPadButtonStyle())
                         Button("IMPORT SAVE FOLDER…") { importingSaves = true }
                             .buttonStyle(VaultPadButtonStyle())
-                        Text("Export creates a ZIP containing only save slots. Import accepts a SAVEGAME folder and preserves existing slots if copying fails. Game data is never included.")
-                            .font(.caption)
+                        Text("Export creates a ZIP of save slots only. Import accepts a SAVEGAME folder and preserves existing slots if copying fails. Game data is never included.")
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(VaultPadTheme.muted)
                     }
                 }
@@ -513,11 +516,11 @@ private struct VaultPadSettingsView: View {
                         Text("Unofficial and not affiliated with Bethesda, ZeniMax, or Microsoft.")
                         Text("No game content is included or uploaded.")
                     }
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
                     .foregroundStyle(VaultPadTheme.muted)
                     Button("LICENSES & NOTICES") { showingLicenses = true }
                         .buttonStyle(.plain)
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(VaultPadTheme.gold)
                     Spacer()
                     if let message = model.message {
@@ -534,14 +537,14 @@ private struct VaultPadSettingsView: View {
                     }
                         .buttonStyle(VaultPadButtonStyle(primary: true))
                 }
-                .padding(14)
-                .background(VaultPadTheme.panel.opacity(0.92), in: RoundedRectangle(cornerRadius: 3))
+                .padding(12)
+                .background(VaultPadTheme.metalShadow.opacity(0.96), in: RoundedRectangle(cornerRadius: 1))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 3)
+                    RoundedRectangle(cornerRadius: 1)
                         .stroke(VaultPadTheme.hairline, lineWidth: 1)
                 }
             }
-            .padding(36)
+            .padding(28)
         }
         .fileImporter(isPresented: $importingSaves, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { model.importSaves(from: url) }
@@ -554,27 +557,27 @@ private struct VaultPadSettingsView: View {
     private var touchModeDescription: String {
         switch model.touchMode {
         case "touch":
-            return "Direct — every one-finger tap lands at your finger. Fast for movement and large targets."
+            return "Direct — tap the world at your finger. Best for movement and large targets."
         case "trackpad":
-            return "Trackpad — drag one finger to move the cursor, then lift and tap to click at that cursor."
+            return "Trackpad — drag to move the pointer, then tap to click."
         default:
-            return "Hybrid · Recommended — direct taps plus momentary two-finger map panning. Trackpad behavior is used only when you select it."
+            return "Hybrid · Recommended — direct taps for play; two-finger drag pans the map."
         }
     }
 
     private var commandBarDescription: String {
         model.toolbarVisible
-            ? "Shows Move, Use, Attack, the current action cost, the next available action, End turn during combat, and Settings."
-            : "Hides gameplay commands. A compact Settings tab remains at the lower-right edge so this choice is always reversible."
+            ? "Shows Walk/Run, Use, Attack, action cost, alternate action, End Turn, and VaultPad settings."
+            : "Hides gameplay commands. The VaultPad settings badge stays available at the lower-right edge."
     }
 
     private func controlHint(_ label: String, _ detail: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
-                .font(.system(size: 10, weight: .black, design: .monospaced))
+                .font(.system(size: 12, weight: .black, design: .monospaced))
                 .foregroundStyle(VaultPadTheme.terminal)
             Text(detail)
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
                 .foregroundStyle(VaultPadTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -588,8 +591,8 @@ private struct VaultPadSettingsView: View {
 
     private func fieldLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 11, weight: .bold, design: .monospaced))
-            .tracking(1.4)
+            .font(.system(size: 13, weight: .bold, design: .monospaced))
+            .tracking(1.1)
             .foregroundStyle(VaultPadTheme.muted)
     }
 
@@ -599,47 +602,70 @@ private struct VaultPadSettingsView: View {
                 .fill(VaultPadTheme.gold)
                 .frame(width: 6, height: 6)
             Text(text)
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
                 .tracking(1.2)
         }
         .foregroundStyle(VaultPadTheme.gold)
     }
 
     private func settingsCard<Content: View>(_ index: String, icon: String, title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
                 Text(index)
-                    .font(.system(size: 12, weight: .black, design: .monospaced))
+                    .font(.system(size: 14, weight: .black, design: .monospaced))
                     .foregroundStyle(VaultPadTheme.ink)
-                    .frame(width: 28, height: 24)
+                    .frame(width: 32, height: 28)
                     .background(VaultPadTheme.gold)
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(VaultPadTheme.terminal)
                 Text(title)
-                    .font(.system(size: 15, weight: .black, design: .monospaced))
+                    .font(.system(size: 18, weight: .black, design: .monospaced))
                     .tracking(1.6)
                     .foregroundStyle(VaultPadTheme.gold)
+                Spacer(minLength: 0)
             }
-            content()
+            .padding(.horizontal, 14)
+            .frame(minHeight: 52)
+            .background(
+                LinearGradient(
+                    colors: [VaultPadTheme.metal, VaultPadTheme.panelRaised, VaultPadTheme.metalShadow],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .overlay {
+                Rectangle().stroke(VaultPadTheme.hairline, lineWidth: 1)
+            }
+
+            VStack(alignment: .leading, spacing: 15) {
+                content()
+            }
+            .padding(18)
         }
         .foregroundStyle(VaultPadTheme.text)
-        .padding(18)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(VaultPadTheme.panel.opacity(0.96), in: RoundedRectangle(cornerRadius: 2))
+        .background(
+            LinearGradient(
+                colors: [VaultPadTheme.panel.opacity(0.99), VaultPadTheme.background.opacity(0.98)],
+                startPoint: .top,
+                endPoint: .bottom
+            ),
+            in: RoundedRectangle(cornerRadius: 1)
+        )
         .overlay {
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: 1)
                 .stroke(VaultPadTheme.hairline, lineWidth: 1)
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 1)
+            RoundedRectangle(cornerRadius: 0)
                 .stroke(Color.black.opacity(0.65), lineWidth: 1)
                 .padding(4)
         }
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(VaultPadTheme.brass)
-                .frame(height: 3)
+                .fill(LinearGradient(colors: [VaultPadTheme.gold.opacity(0.8), VaultPadTheme.brass], startPoint: .leading, endPoint: .trailing))
+                .frame(height: 4)
                 .padding(.horizontal, 1)
         }
     }
