@@ -6,7 +6,7 @@ artifact="${1:-}"
 
 cd "$repo_root"
 
-tracked_private="$(git ls-files | rg '(^|/)(ref|SAVEGAME)(/|$)|(^|/)(master|critter|patch[0-9]{3})\.dat$|\.(sav|ipa)$' || true)"
+tracked_private="$(git ls-files | grep -E '(^|/)(ref|SAVEGAME)(/|$)|(^|/)(master|critter|patch[0-9]{3})\.dat$|\.(sav|ipa)$' || true)"
 if [[ -n "$tracked_private" ]]; then
     echo "error: prohibited game/release data is tracked:" >&2
     echo "$tracked_private" >&2
@@ -30,11 +30,11 @@ if [[ -n "$artifact" ]]; then
     test -f "$artifact/ce.dat"
     test -f "$artifact/LICENSE.md"
     test -f "$artifact/THIRD_PARTY_NOTICES.md"
-    test -n "$(nm -g "$artifact/fallout2-ce" | rg '_falloutPresentIOSProductSettings$')"
-    test -n "$(strings "$artifact/fallout2-ce" | rg 'VAULTPAD  FIELD TERMINAL')"
+    test -n "$(nm -g "$artifact/fallout2-ce" | grep -E '_falloutPresentIOSProductSettings$')"
+    test -n "$(strings "$artifact/fallout2-ce" | grep -F 'VAULTPAD  FIELD TERMINAL')"
     test ! -e "$artifact/master.dat"
     test ! -e "$artifact/critter.dat"
-    if find "$artifact" -type f \( -iname 'master.dat' -o -iname 'critter.dat' -o -iname 'patch000.dat' -o -iname 'SAVE.DAT' \) | rg -q .; then
+    if find "$artifact" -type f \( -iname 'master.dat' -o -iname 'critter.dat' -o -iname 'patch000.dat' -o -iname 'SAVE.DAT' \) | grep -q .; then
         echo "error: proprietary game or save data found in app artifact" >&2
         exit 1
     fi

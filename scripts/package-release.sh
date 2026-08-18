@@ -25,11 +25,11 @@ rm -f "$ipa" "$checksum"
 )
 
 archive_entries="$(unzip -Z1 "$ipa")"
-if printf '%s\n' "$archive_entries" | rg -q '(^|/)__MACOSX/|(^|/)\._'; then
+if printf '%s\n' "$archive_entries" | grep -Eq '(^|/)__MACOSX/|(^|/)\._'; then
     echo "error: macOS metadata found in release archive" >&2
     exit 1
 fi
-if printf '%s\n' "$archive_entries" | rg -qi '(^|/)(ref|SAVEGAME)(/|$)|(^|/)(master|critter|patch[0-9]{3})\.dat$|\.sav$'; then
+if printf '%s\n' "$archive_entries" | grep -Eiq '(^|/)(ref|SAVEGAME)(/|$)|(^|/)(master|critter|patch[0-9]{3})\.dat$|\.sav$'; then
     echo "error: proprietary game or save data found in release archive" >&2
     exit 1
 fi
