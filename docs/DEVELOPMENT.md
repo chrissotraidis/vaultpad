@@ -55,7 +55,7 @@ Run these before proposing a change:
 For changes affecting signing, packaging, onboarding, or bundled resources, also run:
 
 ```bash
-./scripts/package-release.sh 0.1.0 Release
+./scripts/package-release.sh 0.1.0-preview.1 Release
 ```
 
 Touch changes require UI regression testing. Use the focused checklist in [TESTING.md](TESTING.md), then verify the affected gesture on a physical iPad whenever the behavior depends on real multi-touch input.

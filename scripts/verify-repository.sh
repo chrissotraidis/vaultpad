@@ -31,7 +31,7 @@ if [[ -n "$artifact" ]]; then
     test -f "$artifact/LICENSE.md"
     test -f "$artifact/THIRD_PARTY_NOTICES.md"
     test -n "$(nm -g "$artifact/fallout2-ce" | rg '_falloutPresentIOSProductSettings$')"
-    test -n "$(strings "$artifact/fallout2-ce" | rg 'VAULTPAD SETTINGS')"
+    test -n "$(strings "$artifact/fallout2-ce" | rg 'VAULTPAD  FIELD TERMINAL')"
     test ! -e "$artifact/master.dat"
     test ! -e "$artifact/critter.dat"
     if find "$artifact" -type f \( -iname 'master.dat' -o -iname 'critter.dat' -o -iname 'patch000.dat' -o -iname 'SAVE.DAT' \) | rg -q .; then

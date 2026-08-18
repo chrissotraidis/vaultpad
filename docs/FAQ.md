@@ -20,9 +20,9 @@ Open the VaultPad Field Terminal → **Export Saves…** → **Save to Files**. 
 
 Tap the gear-and-VP badge above the HUD, choose **Full Dock** under **VaultPad Dock**, then choose **Apply & Return**.
 
-## Why is there no downloadable app?
+## How do I download VaultPad?
 
-VaultPad is currently a source-only developer preview. The repository contains no distribution certificate or provisioning profile. Its release script can create an unsigned arm64 IPA for private signing, but VaultPad does not publish a pre-signed binary or sideloading service. See [INSTALL.md](INSTALL.md).
+Download the unsigned arm64 IPA from the [latest GitHub release](https://github.com/chrissotraidis/vaultpad/releases/latest), then sign and sideload it with your own Apple account. VaultPad does not publish a pre-signed binary or signing service. See [INSTALL.md](INSTALL.md).
 
 ## Can I use mods?
 

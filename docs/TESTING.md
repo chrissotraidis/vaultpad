@@ -38,7 +38,7 @@ After changing touch, mouse, modal-window, display, or dock code, verify:
 ```bash
 ./scripts/verify-repository.sh
 ./scripts/build-simulator.sh Release
-./scripts/package-release.sh 0.1.0 Release
+./scripts/package-release.sh 0.1.0-preview.1 Release
 ```
 
 A release candidate should also be installed over an existing physical-device build to confirm that imported data and saves remain intact.

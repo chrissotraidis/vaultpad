@@ -68,9 +68,9 @@ Fallout 2 Community Edition makes the game portable. VaultPad makes it playable 
 
 ## Install on an iPad
 
-VaultPad is currently a **source-only developer preview**. There is no App Store, TestFlight, or pre-signed download. Installing it requires a Mac, Xcode, an Apple account, and a connected iPad.
+VaultPad is a **developer preview**. Download the unsigned IPA and checksum from the [latest GitHub release](https://github.com/chrissotraidis/vaultpad/releases/latest), then sign and sideload it with your own Apple account. There is no App Store, TestFlight, or pre-signed download, and the IPA contains no Fallout 2 game data.
 
-### Requirements
+### Build from source requirements
 
 - Apple-silicon Mac
 - Xcode with the iOS platform installed
@@ -203,7 +203,7 @@ Run the repository safety checks at any time:
 
 **Developer preview.** The current build has been exercised in 11-inch and 13-inch iPad Pro simulators and installed on a physical 12.9-inch iPad Pro. Onboarding, direct touch, movement, inventory, dialogue, barter, combat, world-map travel, settings return, lifecycle saves, and in-place device updates have been tested through the real game UI.
 
-The remaining acceptance work is touch comfort over longer sessions, hardware keyboard/mouse behavior, broader iPad coverage, interruption/thermal testing, and a supported distribution path. TestFlight and App Store availability are not claimed.
+The remaining acceptance work is touch comfort over longer sessions, hardware keyboard/mouse behavior, broader iPad coverage, and interruption/thermal testing. TestFlight and App Store availability are not claimed.
 
 - [Documentation index](docs/README.md)
 - [Installation guide](docs/INSTALL.md)
@@ -216,17 +216,17 @@ The remaining acceptance work is touch comfort over longer sessions, hardware ke
 Create an unsigned arm64 app and IPA:
 
 ```bash
-./scripts/package-release.sh 0.1.0 Release
+./scripts/package-release.sh 0.1.0-preview.1 Release
 ```
 
 Artifacts are written under `out/release/` with a sibling SHA-256 file:
 
 ```bash
 cd out/release
-shasum -a 256 -c VaultPad-0.1.0-unsigned.ipa.sha256
+shasum -a 256 -c VaultPad-0.1.0-preview.1-unsigned.ipa.sha256
 ```
 
-The IPA is intentionally unsigned. VaultPad does not ship credentials, certificates, provisioning profiles, or a public sideloading service.
+The IPA is intentionally unsigned. VaultPad does not ship credentials, certificates, provisioning profiles, or a signing service.
 
 ## Repository map
 

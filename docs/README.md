@@ -1,6 +1,6 @@
 # VaultPad documentation
 
-VaultPad is a source-only iPadOS developer preview. It does not include Fallout 2 or any game data.
+VaultPad is an iPadOS developer preview with an unsigned IPA available from [GitHub Releases](https://github.com/chrissotraidis/vaultpad/releases/latest). It does not include Fallout 2 or any game data.
 
 ## For players and testers
 
