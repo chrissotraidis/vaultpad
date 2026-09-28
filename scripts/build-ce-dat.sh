@@ -10,7 +10,11 @@ if [[ -f "$resource" ]]; then
     exit 0
 fi
 
-cmake --preset macos -S "$engine_dir"
+# Xcode 27 accepts macOS deployment targets from 12.0; the engine preset
+# defaults to 10.13, which fails CMake's compiler checks. ce.dat is a host-side
+# build resource, so this does not change the iOS app's supported systems.
+cmake --preset macos -S "$engine_dir" \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET="${VAULTPAD_HOST_MACOS_DEPLOYMENT_TARGET:-12.0}"
 cmake --build "$engine_dir/out/build/macos" --config RelWithDebInfo --target ce-dat-resource
 
 test -s "$resource"
