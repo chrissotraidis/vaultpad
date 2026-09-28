@@ -22,7 +22,7 @@ Tap the gear-and-VP badge above the HUD, choose **Full Dock** under **VaultPad D
 
 ## How do I download VaultPad?
 
-Download the unsigned arm64 IPA from the [latest GitHub release](https://github.com/chrissotraidis/vaultpad/releases/latest), then sign and sideload it with your own Apple account. VaultPad does not publish a pre-signed binary or signing service. See [INSTALL.md](INSTALL.md).
+Download the unsigned arm64 IPA from the latest GitHub release (retired), then sign and sideload it with your own Apple account. VaultPad does not publish a pre-signed binary or signing service. See [INSTALL.md](INSTALL.md).
 
 ## Can I use mods?
 
