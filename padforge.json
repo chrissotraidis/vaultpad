@@ -24,16 +24,26 @@
       "check": "ipa",
       "steps": [
         {
+          "stage": "dependencies",
+          "command": [
+            "git",
+            "-C",
+            "{repo}",
+            "submodule",
+            "update",
+            "--init",
+            "--recursive"
+          ]
+        },
+        {
           "stage": "preflight",
           "command": [
-            "/bin/bash",
             "{repo}/scripts/setup.sh"
           ]
         },
         {
           "stage": "compile",
           "command": [
-            "/bin/bash",
             "{repo}/scripts/package-release.sh",
             "0.0.0-personal",
             "Release"
