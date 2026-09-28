@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "vaultpad",
+  "name": "VaultPad",
+  "game": "Fallout 2 via fallout2-ce (iPad)",
+  "kind": "upstream-engine",
+  "status": "draft-untested",
+  "inputs": [
+    {
+      "type": "fallout2-data",
+      "formats": [
+        "dat"
+      ],
+      "when": "in-app",
+      "description": "Data from your own copy of Fallout 2, added to the app after installation. The build does not read it."
+    }
+  ],
+  "targets": {
+    "ios": {
+      "hosts": {
+        "macos-arm64": "experimental"
+      },
+      "output": "ipa",
+      "check": "ipa",
+      "steps": [
+        {
+          "stage": "preflight",
+          "command": [
+            "/bin/bash",
+            "{repo}/scripts/setup.sh"
+          ]
+        },
+        {
+          "stage": "compile",
+          "command": [
+            "/bin/bash",
+            "{repo}/scripts/package-release.sh",
+            "0.0.0-personal",
+            "Release"
+          ]
+        },
+        {
+          "stage": "package",
+          "command": [
+            "/bin/cp",
+            "{repo}/out/release/VaultPad-0.0.0-personal-unsigned.ipa",
+            "{output}"
+          ]
+        }
+      ]
+    }
+  },
+  "requirements": {
+    "disk_gb": 5,
+    "tools": [
+      {
+        "name": "git",
+        "version_args": [
+          "--version"
+        ]
+      },
+      {
+        "name": "cmake",
+        "version_args": [
+          "--version"
+        ]
+      },
+      {
+        "name": "xcodebuild",
+        "version_args": [
+          "-version"
+        ],
+        "note": "Install Xcode and its iOS platform"
+      }
+    ]
+  },
+  "publication": {
+    "public_binaries": false,
+    "reason": "Relaunch is source-only until the owner decides otherwise."
+  }
+}
