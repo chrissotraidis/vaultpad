@@ -68,7 +68,12 @@ Fallout 2 Community Edition makes the game portable. VaultPad makes it playable 
 
 ## Install on an iPad
 
-Previous builds have been retired; a new version is in progress.
+Download `VaultPad-<version>-unsigned.ipa` from the
+[latest release](https://github.com/chrissotraidis/vaultpad/releases), check it
+against its `.sha256` file, and install it with AltStore Classic, SideStore or
+Sideloadly. The app contains no game data; on first launch, choose the folder
+with your own legally obtained game files. To build it yourself instead, follow
+the steps below.
 
 ### Build from source requirements
 
