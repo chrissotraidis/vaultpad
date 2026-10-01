@@ -5,10 +5,19 @@ repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 project="$repo_root/out/build/engine-ios-device/fallout2-ce.xcodeproj"
 configuration="${1:-Release}"
 
+build_command=(xcodebuild)
+if [[ -n "${CMAKE_BUILD_PARALLEL_LEVEL:-}" ]]; then
+    [[ "$CMAKE_BUILD_PARALLEL_LEVEL" =~ ^[1-9][0-9]*$ ]] || {
+        echo "error: CMAKE_BUILD_PARALLEL_LEVEL must be a positive integer" >&2
+        exit 1
+    }
+    build_command+=(-jobs "$CMAKE_BUILD_PARALLEL_LEVEL")
+fi
+
 "$repo_root/scripts/build-ce-dat.sh"
 "$repo_root/scripts/configure.sh" device
 
-xcodebuild \
+"${build_command[@]}" \
     -project "$project" \
     -target fallout2-ce \
     -configuration "$configuration" \

@@ -22,6 +22,9 @@ jobs:
       - name: Verify repository
         run: ./scripts/verify-repository.sh
 
+      - name: Verify device build job limit
+        run: python3 -B scripts/test-build-device-jobs.py
+
       - name: Build iPad Simulator
         run: ./scripts/build-simulator.sh Release
 
