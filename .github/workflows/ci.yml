@@ -25,11 +25,27 @@ jobs:
       - name: Verify device build job limit
         run: python3 -B scripts/test-build-device-jobs.py
 
+      - name: Verify the upload content gate
+        run: python3 -B scripts/test-ci-content-gate.py
+
       - name: Build iPad Simulator
         run: ./scripts/build-simulator.sh Release
 
       - name: Package unsigned iPad release
         run: ./scripts/package-release.sh 0.1.0 Release
+
+      # Reuse the public PadMint 0.2.8 auditor, pinned to its release commit.
+      - name: Fetch the pinned content auditor
+        uses: actions/checkout@v4
+        with:
+          repository: chrissotraidis/padmint
+          ref: f0efbb738cac934559e986143343dc8720a6fb1d
+          path: .ci-padmint
+          persist-credentials: false
+
+      - name: Audit the IPA before upload
+        working-directory: .ci-padmint
+        run: python3 -B -m padmint audit "$GITHUB_WORKSPACE/out/release/VaultPad-0.1.0-unsigned.ipa"
 
       - uses: actions/upload-artifact@v4
         with:
