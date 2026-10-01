@@ -1,14 +1,14 @@
 # Install VaultPad
 
 > [!IMPORTANT]
-> **Downloads retired.** Prebuilt builds are no longer published, and release
-> links on this page no longer work. A build-it-yourself version is in progress.
+> **Unsigned preview available.** You can download the existing IPA below;
+> building from source is optional. You still need to sign it for your own iPad.
 
 VaultPad is an iPadOS developer preview. The downloadable IPA is unsigned and requires your own Apple account and signing/sideloading tool. You also need data from a legally purchased copy of Fallout 2. The repository and release artifact contain no game data.
 
 ## Download the unsigned IPA
 
-Download `VaultPad-0.1.0-preview.1-unsigned.ipa` and its checksum from the latest GitHub release (retired). Verify the download, then install it with a signing/sideloading tool that uses your Apple account:
+Download `VaultPad-0.1.0-preview.1-unsigned.ipa` and its checksum from the [v0.1.0-preview.1 release](https://github.com/chrissotraidis/vaultpad/releases/tag/v0.1.0-preview.1). Verify the download, then install it with a signing/sideloading tool that uses your Apple account:
 
 ```bash
 shasum -a 256 -c VaultPad-0.1.0-preview.1-unsigned.ipa.sha256
