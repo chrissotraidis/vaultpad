@@ -12,10 +12,19 @@
   <a href="#project-status"><img alt="Developer Preview" src="https://img.shields.io/badge/status-developer%20preview-CBB35E?style=flat-square&labelColor=171812"></a>
   <a href="LICENSE.md"><img alt="Sustainable Use License" src="https://img.shields.io/badge/license-Sustainable%20Use-6F9E52?style=flat-square&labelColor=171812"></a>
   <a href="#your-game-stays-yours"><img alt="No game data included" src="https://img.shields.io/badge/game%20data-not%20included-6F9E52?style=flat-square&labelColor=171812"></a>
+  <a href="https://github.com/chrissotraidis/padmint"><img alt="VaultPad setup in PadMint" src="https://img.shields.io/badge/PadMint-guided%20setup-3EB489?style=flat-square"></a>
+  <a href="https://discord.gg/xwHfUD2bxW"><img alt="Join the VaultPad Discord" src="https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&amp;logoColor=white&amp;style=flat-square"></a>
 </p>
 
 > [!IMPORTANT]
 > VaultPad does **not** include Fallout 2 or any Bethesda, ZeniMax, or Microsoft assets. You need data from a legally purchased copy. Import happens locally; VaultPad does not download or upload your game files.
+
+> [!NOTE]
+> **AI disclosure:** VaultPad uses substantial AI assistance for code, tests,
+> documentation, debugging and maintenance. Some support replies and maintenance
+> tasks are automated. There is no audited percentage of AI-generated code.
+> Build, test and device records describe what was checked. This disclosure
+> concerns VaultPad's workflow, not the authorship of its upstream projects.
 
 ## Built for fingers. Faithful to Fallout 2.
 
@@ -268,6 +277,16 @@ Before opening a pull request:
 ```
 
 Never attach or commit game data, save files, signed IPAs, provisioning profiles, or Apple credentials.
+
+## Community and support
+
+[Join the Discord](https://discord.gg/xwHfUD2bxW) for help and news. It is one
+community for VaultPad and its sibling projects, such as KartPad, BlueWake and
+MeleePad: ask about setup and installing, share how it runs on your device, and
+hear about new releases first.
+
+Found a bug? [Open an issue](https://github.com/chrissotraidis/vaultpad/issues)
+with your device, its OS version, and the steps that led to it.
 
 ## Credits and legal
 
