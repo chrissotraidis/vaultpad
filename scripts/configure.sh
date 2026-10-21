@@ -45,12 +45,21 @@ cmake_args=(
     -DFALLOUT_IOS_PRODUCT_ASSET_CATALOG="$repo_root/ios/Assets.xcassets"
 )
 
-# Reuse an existing dependency checkout when available. Otherwise CMake fetches
-# the engine's pinned versions from their official repositories.
-dependency_root="$engine_dir/out/build/macos/_deps"
-if [[ -d "$dependency_root/sdl2-src" ]]; then
-    cmake_args+=("-DFETCHCONTENT_SOURCE_DIR_SDL2=$dependency_root/sdl2-src")
+# SDL 2.32.10 plus the Pad ports UIKit scene startup commit: apps built with the
+# iOS 27 SDK must start through UIKit scenes or iOS 27 closes them at launch.
+sdl_dir="$repo_root/out/deps/sdl2-scenes"
+sdl_pin="c6756fcd3de8090a8f72ac1a0b6fb6e50f0021d1"
+if [[ "$(git -C "$sdl_dir" rev-parse HEAD 2>/dev/null || true)" != "$sdl_pin" ]]; then
+    rm -rf "$sdl_dir"
+    git init -q "$sdl_dir"
+    git -C "$sdl_dir" fetch -q --depth 1 https://github.com/chrissotraidis/SDL.git "$sdl_pin"
+    git -C "$sdl_dir" checkout -q --detach FETCH_HEAD
 fi
+cmake_args+=("-DFETCHCONTENT_SOURCE_DIR_SDL2=$sdl_dir")
+
+# Reuse an existing zlib checkout when available. Otherwise CMake fetches the
+# engine's pinned version from its official repository.
+dependency_root="$engine_dir/out/build/macos/_deps"
 if [[ -d "$dependency_root/zlib-src" ]]; then
     cmake_args+=("-DFETCHCONTENT_SOURCE_DIR_ZLIB=$dependency_root/zlib-src")
 fi
