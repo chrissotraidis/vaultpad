@@ -149,6 +149,12 @@ data/            optional
 
 VaultPad validates the selection, copies the data into its private Documents container, and launches the game. Nothing is sent off the iPad.
 
+Preview 2 stages and checks every input before replacing installed data. Missing
+or incomplete source files report an error, and empty required files return to
+setup instead of skipping it. If importing fails, keep the original folder,
+download any cloud files locally, and choose it again. Update over the existing
+app with the same signing account and bundle identifier to keep your saves.
+
 > [!WARNING]
 > Deleting VaultPad also deletes its app container, including imported game data and saves. Export saves from the Field Terminal before uninstalling. Installing a new development build over the existing app preserves the container when the bundle identifier stays the same.
 

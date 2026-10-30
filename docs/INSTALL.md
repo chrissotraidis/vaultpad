@@ -8,10 +8,10 @@ VaultPad is an iPadOS developer preview. The downloadable IPA is unsigned and re
 
 ## Download the unsigned IPA
 
-Download `VaultPad-0.1.0-preview.1-unsigned.ipa` and its checksum from the [v0.1.0-preview.1 release](https://github.com/chrissotraidis/vaultpad/releases/tag/v0.1.0-preview.1). Verify the download, then install it with a signing/sideloading tool that uses your Apple account:
+Download `VaultPad-0.1.0-preview.2-unsigned.ipa` and its checksum from the [v0.1.0-preview.2 release](https://github.com/chrissotraidis/vaultpad/releases/tag/v0.1.0-preview.2). Verify the download, then install it with a signing/sideloading tool that uses your Apple account:
 
 ```bash
-shasum -a 256 -c VaultPad-0.1.0-preview.1-unsigned.ipa.sha256
+shasum -a 256 -c VaultPad-0.1.0-preview.2-unsigned.ipa.sha256
 ```
 
 VaultPad does not supply credentials, certificates, provisioning profiles, or a signing service.
@@ -52,14 +52,14 @@ First launch presents VaultPad's importer. Choose the folder containing `master.
 Create an unsigned arm64 app and IPA:
 
 ```bash
-./scripts/package-release.sh 0.1.0-preview.1 Release
+./scripts/package-release.sh 0.1.0-preview.2 Release
 ```
 
-The output is `out/release/VaultPad-0.1.0-preview.1-unsigned.ipa` with a sibling SHA-256 file. Verify it before use:
+The output is `out/release/VaultPad-0.1.0-preview.2-unsigned.ipa` with a sibling SHA-256 file. Verify it before use:
 
 ```bash
 cd out/release
-shasum -a 256 -c VaultPad-0.1.0-preview.1-unsigned.ipa.sha256
+shasum -a 256 -c VaultPad-0.1.0-preview.2-unsigned.ipa.sha256
 ```
 
 The IPA is intentionally unsigned. Install it with a signing/sideloading tool that uses your Apple account, or sign and run the generated device project in Xcode. VaultPad does not supply credentials, certificates, or provisioning profiles.
