@@ -135,6 +135,9 @@ enum VaultDataImporter {
             guard copied == item.size else { throw ImportFailure.invalid(item.source.lastPathComponent) }
             try output.synchronize()
         }
+        // The source can change after manifest validation without changing size.
+        // Apply the same required-file checks to the bytes we will actually keep.
+        guard isReady(in: staging) else { throw ImportFailure.invalid("The copied game data") }
         for item in manifest.items {
             let source = item.relativeComponents.reduce(staging) { $0.appendingPathComponent($1) }
             let destination = item.relativeComponents.reduce(documents) { $0.appendingPathComponent($1) }

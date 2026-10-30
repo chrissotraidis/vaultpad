@@ -12,10 +12,15 @@ enum VaultDataImporterTests {
         try fm.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: root) }
         var passed = 0
+        let requiredFiles: [(String, UInt64)] = [("master.dat", 100_000_000), ("critter.dat", 50_000_000)]
+        let oldMarker: UInt8 = 0x4f
+        let newMarker: UInt8 = 0x4e
 
         func scenario(_ name: String, _ test: (URL, URL) throws -> Void) throws {
-            let source = root.appendingPathComponent(name).appendingPathComponent("source")
-            let docs = root.appendingPathComponent(name).appendingPathComponent("documents")
+            let scenarioRoot = root.appendingPathComponent(name)
+            defer { try? fm.removeItem(at: scenarioRoot) }
+            let source = scenarioRoot.appendingPathComponent("source")
+            let docs = scenarioRoot.appendingPathComponent("documents")
             try fm.createDirectory(at: source, withIntermediateDirectories: true)
             try fm.createDirectory(at: docs, withIntermediateDirectories: true)
             try test(source, docs)
@@ -23,10 +28,30 @@ enum VaultDataImporterTests {
             passed += 1
             print("PASS \(name)")
         }
-        func manifest(_ source: URL, _ entries: [(String, Int64)]) -> ImportManifest {
-            ImportManifest(root: source, items: entries.map {
-                ImportItem(source: source.appendingPathComponent($0.0), relativeComponents: [$0.0], size: $0.1)
-            }, totalBytes: entries.reduce(0) { $0 + $1.1 })
+
+        // Sparse synthetic files satisfy the unchanged production header/size
+        // checks. They contain no game data and avoid allocating 150 MB in memory.
+        func makeReadyFiles(_ folder: URL, marker: UInt8, uppercase: Bool = false) throws {
+            for (name, size) in requiredFiles {
+                let file = folder.appendingPathComponent(uppercase ? name.uppercased() : name)
+                try Data([0x78, 0x9c, marker]).write(to: file)
+                let handle = try FileHandle(forWritingTo: file)
+                try handle.truncate(atOffset: size)
+                try handle.close()
+            }
+            try require(VaultDataImporter.isReady(in: folder), "fixture does not satisfy production readiness")
+        }
+        func requireReadyFiles(_ folder: URL, marker: UInt8) throws {
+            try require(VaultDataImporter.isReady(in: folder), "installed data is no longer ready")
+            for (name, size) in requiredFiles {
+                let file = folder.appendingPathComponent(name)
+                let values = try file.resourceValues(forKeys: [.fileSizeKey])
+                try require(values.fileSize == Int(size), "installed file length changed")
+                let handle = try FileHandle(forReadingFrom: file)
+                let prefix = try handle.read(upToCount: 3)
+                try handle.close()
+                try require(prefix == Data([0x78, 0x9c, marker]), "installed file was unexpectedly replaced")
+            }
         }
         func reject(_ action: () throws -> Void) throws {
             var failed = false
@@ -35,72 +60,92 @@ enum VaultDataImporterTests {
         }
 
         try scenario("missing-source-preserves-existing") { source, docs in
-            let existing = docs.appendingPathComponent("master.dat")
-            try Data("keep".utf8).write(to: existing)
-            try reject { try VaultDataImporter.copy(manifest(source, [("master.dat", 99)]), to: docs) { _ in } }
-            try require(try Data(contentsOf: existing) == Data("keep".utf8), "missing source destroyed existing data")
+            try makeReadyFiles(source, marker: newMarker)
+            try makeReadyFiles(docs, marker: oldMarker)
+            let manifest = try VaultDataImporter.manifest(for: source)
+            try fm.removeItem(at: manifest.items[0].source)
+            try reject { try VaultDataImporter.copy(manifest, to: docs) { _ in } }
+            try requireReadyFiles(docs, marker: oldMarker)
         }
         try scenario("later-input-failure-preserves-all") { source, docs in
-            try Data("new".utf8).write(to: source.appendingPathComponent("master.dat"))
-            for name in ["master.dat", "critter.dat"] { try Data("old".utf8).write(to: docs.appendingPathComponent(name)) }
-            try reject { try VaultDataImporter.copy(manifest(source, [("master.dat", 3), ("critter.dat", 3)]), to: docs) { _ in } }
-            for name in ["master.dat", "critter.dat"] {
-                try require(try Data(contentsOf: docs.appendingPathComponent(name)) == Data("old".utf8), "partial import changed installed data")
+            try makeReadyFiles(source, marker: newMarker)
+            try makeReadyFiles(docs, marker: oldMarker)
+            let manifest = try VaultDataImporter.manifest(for: source)
+            try require(manifest.items.count == 2, "unexpected required fixture manifest")
+            try fm.removeItem(at: manifest.items[1].source)
+            var copied: Int64 = 0
+            try reject { try VaultDataImporter.copy(manifest, to: docs) { copied = $0 } }
+            try require(copied == manifest.items[0].size, "later failure did not follow a complete staged input")
+            try requireReadyFiles(docs, marker: oldMarker)
+        }
+        for changedSize: UInt64 in [99_999_999, 100_000_001] {
+            try scenario("changed-size-\(changedSize)") { source, docs in
+                try makeReadyFiles(source, marker: newMarker)
+                try makeReadyFiles(docs, marker: oldMarker)
+                let manifest = try VaultDataImporter.manifest(for: source)
+                let handle = try FileHandle(forWritingTo: source.appendingPathComponent("master.dat"))
+                try handle.truncate(atOffset: changedSize)
+                try handle.close()
+                try reject { try VaultDataImporter.copy(manifest, to: docs) { _ in } }
+                try requireReadyFiles(docs, marker: oldMarker)
             }
         }
-        for expected: Int64 in [2, 9] {
-            try scenario("changed-size-\(expected)") { source, docs in
-                try Data("data".utf8).write(to: source.appendingPathComponent("master.dat"))
-                try Data("old".utf8).write(to: docs.appendingPathComponent("master.dat"))
-                try reject { try VaultDataImporter.copy(manifest(source, [("master.dat", expected)]), to: docs) { _ in } }
-                try require(try Data(contentsOf: docs.appendingPathComponent("master.dat")) == Data("old".utf8), "changed source overwrote installed data")
-            }
+        try scenario("same-size-header-change-preserves-ready-data") { source, docs in
+            try makeReadyFiles(source, marker: newMarker)
+            try makeReadyFiles(docs, marker: oldMarker)
+            let manifest = try VaultDataImporter.manifest(for: source)
+            let handle = try FileHandle(forWritingTo: source.appendingPathComponent("master.dat"))
+            try handle.write(contentsOf: Data([0x00, 0x00]))
+            try handle.close()
+            var copied: Int64 = 0
+            try reject { try VaultDataImporter.copy(manifest, to: docs) { copied = $0 } }
+            try require(copied == manifest.totalBytes, "header regression did not reach staged validation")
+            try requireReadyFiles(docs, marker: oldMarker)
         }
         try scenario("same-source-destination") { _, docs in
-            let data = Data(repeating: 120, count: 2_000_001)
-            try data.write(to: docs.appendingPathComponent("master.dat"))
+            try makeReadyFiles(docs, marker: oldMarker)
+            let manifest = try VaultDataImporter.manifest(for: docs)
             var copied: Int64 = 0
-            try VaultDataImporter.copy(manifest(docs, [("master.dat", Int64(data.count))]), to: docs) { copied = $0 }
-            try require(try Data(contentsOf: docs.appendingPathComponent("master.dat")) == data, "self import destroyed source")
-            try require(copied == data.count, "incorrect progress")
+            try VaultDataImporter.copy(manifest, to: docs) { copied = $0 }
+            try requireReadyFiles(docs, marker: oldMarker)
+            try require(copied == manifest.totalBytes, "incorrect progress")
         }
         try scenario("successful-replacement-preserves-saves") { source, docs in
-            try Data("new".utf8).write(to: source.appendingPathComponent("master.dat"))
-            try Data("old".utf8).write(to: docs.appendingPathComponent("master.dat"))
+            try makeReadyFiles(source, marker: newMarker)
+            try makeReadyFiles(docs, marker: oldMarker)
             let save = docs.appendingPathComponent("data/savegame/slot1/save.dat")
             try fm.createDirectory(at: save.deletingLastPathComponent(), withIntermediateDirectories: true)
             try Data("my save".utf8).write(to: save)
-            try VaultDataImporter.copy(manifest(source, [("master.dat", 3)]), to: docs) { _ in }
-            try require(try Data(contentsOf: docs.appendingPathComponent("master.dat")) == Data("new".utf8), "replacement failed")
+            let manifest = try VaultDataImporter.manifest(for: source)
+            try VaultDataImporter.copy(manifest, to: docs) { _ in }
+            try requireReadyFiles(docs, marker: newMarker)
+            try requireReadyFiles(source, marker: newMarker)
             try require(try Data(contentsOf: save) == Data("my save".utf8), "save changed")
         }
         try scenario("failed-publish-preserves-destination") { source, docs in
-            try Data("new".utf8).write(to: source.appendingPathComponent("master.dat"))
-            let target = docs.appendingPathComponent("master.dat")
+            try makeReadyFiles(source, marker: newMarker)
+            let manifest = try VaultDataImporter.manifest(for: source)
+            let target = docs.appendingPathComponent(manifest.items[0].relativeComponents[0])
             try fm.createDirectory(at: target, withIntermediateDirectories: true)
             try Data("keep".utf8).write(to: target.appendingPathComponent("sentinel"))
-            try reject { try VaultDataImporter.copy(manifest(source, [("master.dat", 3)]), to: docs) { _ in } }
+            var copied: Int64 = 0
+            try reject { try VaultDataImporter.copy(manifest, to: docs) { copied = $0 } }
+            try require(copied == manifest.totalBytes, "replacement failure did not follow complete staging")
             try require(try Data(contentsOf: target.appendingPathComponent("sentinel")) == Data("keep".utf8), "failed rename removed destination")
+            try requireReadyFiles(source, marker: newMarker)
         }
         try scenario("empty-files-are-not-ready") { _, docs in
-            for name in ["master.dat", "critter.dat"] { try Data().write(to: docs.appendingPathComponent(name)) }
+            for (name, _) in requiredFiles { try Data().write(to: docs.appendingPathComponent(name)) }
             try require(!VaultDataImporter.isReady(in: docs), "empty data bypassed setup")
         }
         try scenario("manifest-validates-and-excludes-saves") { source, _ in
-            // Sparse synthetic files satisfy only this importer's documented header/size checks.
-            for (name, size): (String, UInt64) in [("MASTER.DAT", 100_000_000), ("CRITTER.DAT", 50_000_000)] {
-                let file = source.appendingPathComponent(name)
-                try Data([0x78, 0x9c]).write(to: file)
-                let handle = try FileHandle(forWritingTo: file)
-                try handle.truncate(atOffset: size)
-                try handle.close()
-            }
+            try makeReadyFiles(source, marker: newMarker, uppercase: true)
             let saves = source.appendingPathComponent("data/SAVEGAME/slot1")
             try fm.createDirectory(at: saves, withIntermediateDirectories: true)
             try Data("save".utf8).write(to: saves.appendingPathComponent("save.dat"))
             let result = try VaultDataImporter.manifest(for: source)
             try require(result.items.count == 2, "source saves entered import manifest")
-            try require(VaultDataImporter.isReady(in: source), "valid data was not ready")
+            try require(result.totalBytes == 150_000_000, "incorrect required data size")
         }
         print("\(passed) import regressions passed")
     }
