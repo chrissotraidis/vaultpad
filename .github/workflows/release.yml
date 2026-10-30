@@ -1,12 +1,15 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Candidate version, without the v prefix
+        required: true
+        default: 0.1.0-preview.2
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   unsigned-ipa:
@@ -22,16 +25,29 @@ jobs:
 
       - name: Build and package
         env:
-          VERSION: ${{ github.ref_name }}
-        run: ./scripts/package-release.sh "${VERSION#v}" Release
+          VERSION: ${{ inputs.version }}
+        run: ./scripts/package-release.sh "$VERSION" Release
 
-      - name: Publish GitHub release
+      - name: Fetch the pinned content auditor
+        uses: actions/checkout@v4
+        with:
+          repository: chrissotraidis/padmint
+          ref: e322f69f0c4f41ee5ed2e6b5c77d3d4fcd89c9a5
+          path: .ci-padmint
+          persist-credentials: false
+
+      - name: Audit candidate contents
+        working-directory: .ci-padmint
         env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ github.ref_name }}
-        run: >-
-          gh release create "$VERSION"
-          "out/release/VaultPad-${VERSION#v}-unsigned.ipa"
-          "out/release/VaultPad-${VERSION#v}-unsigned.ipa.sha256"
-          --generate-notes
-          --title "VaultPad $VERSION"
+          VERSION: ${{ inputs.version }}
+        run: python3 -B -m padmint audit "$GITHUB_WORKSPACE/out/release/VaultPad-$VERSION-unsigned.ipa"
+
+      # Publication uses the exact artifacts that pass the maintainer's local
+      # release gate. CI prepares candidates; a tag must not publish new bytes.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VaultPad-release-candidate
+          path: |
+            out/release/*.ipa
+            out/release/*.sha256
+          if-no-files-found: error

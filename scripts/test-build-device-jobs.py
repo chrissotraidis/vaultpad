@@ -18,8 +18,8 @@ class DeviceBuildJobsTests(unittest.TestCase):
         guide = (ROOT / "docs/INSTALL.md").read_text()
         self.assertIn("Unsigned preview available", guide)
         self.assertIn("building from source is optional", guide)
-        self.assertIn("https://github.com/chrissotraidis/vaultpad/releases/tag/v0.1.0-preview.1", guide)
-        self.assertIn("shasum -a 256 -c VaultPad-0.1.0-preview.1-unsigned.ipa.sha256", guide)
+        self.assertIn("https://github.com/chrissotraidis/vaultpad/releases/tag/v0.1.0-preview.2", guide)
+        self.assertIn("shasum -a 256 -c VaultPad-0.1.0-preview.2-unsigned.ipa.sha256", guide)
         self.assertNotIn("Downloads retired", guide)
         self.assertNotIn("latest GitHub release (retired)", guide)
 
