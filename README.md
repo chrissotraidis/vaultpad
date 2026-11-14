@@ -236,14 +236,14 @@ The remaining acceptance work is touch comfort over longer sessions, hardware ke
 Create an unsigned arm64 app and IPA:
 
 ```bash
-./scripts/package-release.sh 0.1.0-preview.1 Release
+./scripts/package-release.sh 0.1.0-preview.3 Release
 ```
 
 Artifacts are written under `out/release/` with a sibling SHA-256 file:
 
 ```bash
 cd out/release
-shasum -a 256 -c VaultPad-0.1.0-preview.1-unsigned.ipa.sha256
+shasum -a 256 -c VaultPad-0.1.0-preview.3-unsigned.ipa.sha256
 ```
 
 The IPA is intentionally unsigned. VaultPad does not ship credentials, certificates, provisioning profiles, or a signing service.
