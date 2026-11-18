@@ -52,14 +52,14 @@ First launch presents VaultPad's importer. Choose the folder containing `master.
 Create an unsigned arm64 app and IPA:
 
 ```bash
-./scripts/package-release.sh 0.1.0-preview.3 Release
+./scripts/package-release.sh 0.1.1-preview.4 Release
 ```
 
-The output is `out/release/VaultPad-0.1.0-preview.3-unsigned.ipa` with a sibling SHA-256 file. Verify it before use:
+The output is `out/release/VaultPad-0.1.1-preview.4-unsigned.ipa` with a sibling SHA-256 file. Verify it before use:
 
 ```bash
 cd out/release
-shasum -a 256 -c VaultPad-0.1.0-preview.3-unsigned.ipa.sha256
+shasum -a 256 -c VaultPad-0.1.1-preview.4-unsigned.ipa.sha256
 ```
 
 The IPA is intentionally unsigned. Install it with a signing/sideloading tool that uses your Apple account, or sign and run the generated device project in Xcode. VaultPad does not supply credentials, certificates, or provisioning profiles.
