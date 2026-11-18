@@ -18,6 +18,7 @@
 #include "svga.h"
 #include "text_font.h"
 #include "touch.h"
+#include "platform/ios/quick_toolbar.h"
 #include "win32.h"
 
 namespace fallout {
@@ -998,6 +999,12 @@ void _GNW95_process_message()
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
+#if defined(__APPLE__) && TARGET_OS_IOS
+        case SDL_JOYDEVICEADDED:
+        case SDL_JOYDEVICEREMOVED:
+            quickToolbarUpdateControllerVisibility();
+            break;
+#endif
         case SDL_MOUSEMOTION:
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:

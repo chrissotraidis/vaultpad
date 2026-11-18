@@ -109,6 +109,10 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
+#if defined(__APPLE__) && TARGET_OS_IOS
+    SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER);
+#endif
+
     atexit(SDL_Quit);
 
     SDL_ShowCursor(SDL_DISABLE);

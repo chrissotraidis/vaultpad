@@ -14,6 +14,7 @@ void quickToolbarFree();
 void quickToolbarShow();
 void quickToolbarHide();
 void quickToolbarRefresh();
+void quickToolbarUpdateControllerVisibility();
 bool quickToolbarIsWindow(int windowId);
 
 // User preference toggle. Product builds keep a compact Settings button when

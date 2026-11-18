@@ -2,6 +2,7 @@
 
 #if defined(__APPLE__) && TARGET_OS_IOS
 
+#include <SDL.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -74,6 +75,17 @@ namespace {
     constexpr int kToolbarBottomMargin = 2;
     constexpr int kCollapsedRightMargin = 10;
 
+    bool controllerConnected()
+    {
+        for (int index = 0; index < SDL_NumJoysticks(); ++index) {
+            if (SDL_IsGameController(index)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool gControllerConnected = false;
     int gToolbarWindow = -1;
     int gToolbarX = 0;
     int gToolbarY = 0;
@@ -566,8 +578,27 @@ void quickToolbarShow()
     if (gToolbarWindow == -1) {
         return;
     }
-    windowShow(gToolbarWindow);
+    gControllerConnected = controllerConnected();
+    if (!gControllerConnected) {
+        windowShow(gToolbarWindow);
+    }
     gShown = true;
+}
+
+void quickToolbarUpdateControllerVisibility()
+{
+    const bool connected = controllerConnected();
+    if (gControllerConnected == connected) {
+        return;
+    }
+    gControllerConnected = connected;
+    if (gShown && gToolbarWindow != -1) {
+        if (connected) {
+            windowHide(gToolbarWindow);
+        } else {
+            windowShow(gToolbarWindow);
+        }
+    }
 }
 
 void quickToolbarSetEnabled(bool enabled)
@@ -600,7 +631,7 @@ bool quickToolbarIsWindow(int windowId)
 
 bool quickToolbarContainsPoint(int x, int y)
 {
-    if (gToolbarWindow == -1 || !gShown) {
+    if (gToolbarWindow == -1 || !gShown || gControllerConnected) {
         return false;
     }
 
