@@ -400,6 +400,10 @@ void handleWindowSizeChanged()
     movieHandleRendererReset();
     destroyRenderer();
     createRenderer(screenGetWidth(), screenGetHeight());
+#if defined(__APPLE__) && TARGET_OS_IOS
+    // The window may have moved between the iPad and an external display.
+    mouseDeviceInitMode();
+#endif
     mouseDeviceRefreshWindowMapping();
 }
 

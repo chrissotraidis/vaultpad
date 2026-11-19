@@ -1,5 +1,12 @@
 #include "dinput.h"
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+#if defined(__APPLE__) && TARGET_OS_IOS
+#include "platform/ios/paths.h"
+#endif
+
 #include "sfall_kb_helpers.h"
 #include "svga.h"
 
@@ -55,6 +62,15 @@ bool mouseDeviceInitMode()
 
     // TODO: add setting for mouse capture (relative mode) in windowed, differentiated from the web version.
     bool wantsRelativeMode = screenIsFullscreen();
+
+#if defined(__APPLE__) && TARGET_OS_IOS
+    // On the iPad's own screen the game owns the cursor (pointer lock). On an
+    // external display iPadOS does not lock the pointer, so relative mode left
+    // the trackpad pointer and the game cursor apart. Follow the pointer there.
+    if (wantsRelativeMode && iOSWindowIsOnExternalDisplay(gSdlWindow)) {
+        wantsRelativeMode = false;
+    }
+#endif
 
     if (wantsRelativeMode) {
         mouseRelativeMode = true;

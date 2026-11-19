@@ -1,8 +1,10 @@
 #include "paths.h"
 
 #include <Foundation/Foundation.h>
+#include <UIKit/UIKit.h>
 
 #include <SDL.h>
+#include <SDL_syswm.h>
 
 // Modelled after SDL_AndroidGetExternalStoragePath.
 const char* iOSGetDocumentsPath()
@@ -30,4 +32,18 @@ const char* iOSGetDocumentsPath()
     }
 
     return s_iOSDocumentsPath;
+}
+
+bool iOSWindowIsOnExternalDisplay(SDL_Window* window)
+{
+    if (window == nullptr) {
+        return false;
+    }
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (!SDL_GetWindowWMInfo(window, &info) || info.subsystem != SDL_SYSWM_UIKIT) {
+        return false;
+    }
+    UIScreen* screen = info.info.uikit.window.windowScene.screen;
+    return screen != nil && screen != UIScreen.mainScreen;
 }
